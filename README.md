@@ -43,6 +43,14 @@ uv sync
 
 This creates the virtual environment at `DESD-Assesment\.venv` and installs the locked dependencies, including Django. The environment is local to this repository and is excluded from Git. You do not need to activate it when using `uv run`.
 
+`uv sync` does not activate the environment in the current terminal. If you want to activate it for commands such as `python`, run this from the project folder in PowerShell:
+
+```pwsh
+.\.venv\Scripts\Activate.ps1
+```
+
+The terminal prompt will show `(.venv)` when it is active. When you are finished, run `deactivate`. Alternatively, leave it inactive and prefix commands with `uv run`, for example `uv run python --version`.
+
 Verify Python and Django are available in that environment:
 
 ```pwsh
