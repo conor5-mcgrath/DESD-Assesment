@@ -71,18 +71,19 @@ flowchart TD
     B --> C["Calculate Commission"]
     C --> D["External Payment Provider"]
     D --> E{"Payment successful?"}
-    E -- "No / retry permitted" --> C
+    E -- "No / retry permitted" --> D
     E -- "No / unresolved" --> F["Handle error or pending outcome"]
     F --> D
-    E -- "Yes" --> F["Confirm Marketplace Order"]
+    E -- "Yes" --> G["Confirm Marketplace Order"]
     G --> H["Update Inventory"]
     G --> I["Notify Producers"]
     H --> K["Delivery"]
-    J --> K
+    I --> K
     H --> L["Customer Order Confirmation"]
     K --> M["Producer Updates Fulfilment Status"]
     M --> N["Customer Views Fulfilment Status"]
 ```
+
 
 ## 5. Major Feature 1: Ordering
 
