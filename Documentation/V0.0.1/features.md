@@ -68,20 +68,20 @@ The following diagram illustrates how the three major features connect to one an
 ```mermaid
 flowchart TD
     A["Product Exploration"] --> B["Ordering"]
-    B --> C["External Payment Provider"]
-    C --> D{"Payment successful?"}
-    D -- "No / retry permitted" --> C
-    D -- "No / unresolved" --> E["Handle error or pending outcome"]
-    E --> C
-    D -- "Yes" --> F["Confirm Marketplace Order"]
-    F --> G["Update Inventory"]
-    F --> H["Calculate Commission"]
-    F --> I["Notify Producers"]
-    G --> J["Delivery"]
-    I --> J
-    F --> K["Customer Order Confirmation"]
-    J --> L["Producer Updates Fulfilment Status"]
-    L --> M["Customer Views Fulfilment Status"]
+    B --> C["Calculate Commission"]
+    C --> D["External Payment Provider"]
+    D --> E{"Payment successful?"}
+    E -- "No / retry permitted" --> C
+    E -- "No / unresolved" --> F["Handle error or pending outcome"]
+    F --> D
+    E -- "Yes" --> F["Confirm Marketplace Order"]
+    G --> H["Update Inventory"]
+    G --> I["Notify Producers"]
+    H --> K["Delivery"]
+    J --> K
+    H --> L["Customer Order Confirmation"]
+    K --> M["Producer Updates Fulfilment Status"]
+    M --> N["Customer Views Fulfilment Status"]
 ```
 
 ## 5. Major Feature 1: Ordering
