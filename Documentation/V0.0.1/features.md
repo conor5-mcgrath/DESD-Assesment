@@ -196,18 +196,3 @@ The marketplace must preserve producer-specific fulfilment arrangements. Produce
 | Ordering | Basket management; checkout and order review; external payment integration; order creation and confirmation; audit records |
 | Product Exploration | Product catalogue; product search; product categories; product origin and provenance |
 | Delivery | Fulfilment information; customer order confirmation; producer access; fulfilment updates |
-
-## 8. Definition of Done
-
-A feature can be considered complete when:
-
-- Its acceptance criteria have been met.
-- Relevant functionality has been tested.
-- Appropriate validation and error handling are implemented.
-- Integration with related features has been tested.
-- External payment integration has been tested using the provider's approved test arrangements.
-- Order, stock, and payment outcomes remain consistent.
-- Producer access controls have been tested.
-- Audit records are protected against alteration and retained according to the specified policy.
-- Code review has been completed where practical.
-- Necessary documentation has been updated.
