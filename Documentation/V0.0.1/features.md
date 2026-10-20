@@ -91,7 +91,7 @@ flowchart TD
 
 Ordering includes basket management, checkout, payment integration, order confirmation, stock management, and commission calculations.
 
-### 5.1 Basket Management
+### 5.1 Basket Management - Aston
 
 - **ORD-01 – Add products to basket:** Customers can add available products to their basket.
 - **ORD-02 – View basket:** Customers can view selected products, quantities, prices, and associated producers.
@@ -105,7 +105,7 @@ Ordering includes basket management, checkout, payment integration, order confir
 - **ORD-10 – Handle expired reservations:** If a reservation expires before the order is completed, the system revalidates stock before proceeding.
 - **ORD-11 – Review fulfilment arrangements:** Customers can review the delivery or collection arrangements applicable to each producer.
 
-### 5.2 Checkout and Order Review
+### 5.2 Checkout and Order Review - Aston
 
 - **ORD-12 – Review order:** Customers can inspect their order before payment.
 - **ORD-13 – Display itemised costs:** The system displays products, quantities, unit prices, and producer associations.
@@ -113,7 +113,7 @@ Ordering includes basket management, checkout, payment integration, order confir
 - **ORD-15 – Display delivery-inclusive prices:** Producer-listed prices, including any delivery costs incorporated by the producer, are used without adding a separate marketplace delivery charge.
 - **ORD-16 – Validate preparation lead time:** Where fulfilment dates are selected, the system applies the two-business-day preparation rule.
 
-### 5.3 External Payment Integration
+### 5.3 External Payment Integration - Aston
 
 - **ORD-17 – Integrate external payment provider:** The marketplace sends payment requests to an external payment provider using its supported integration interface.
 - **ORD-18 – Handle successful payment:** The system processes a successful payment response and continues the order-confirmation workflow.
@@ -123,7 +123,7 @@ Ordering includes basket management, checkout, payment integration, order confir
 - **ORD-22 – Prevent duplicate processing:** Repeated requests, callbacks, or retries must not create duplicate confirmed orders or duplicate charges.
 - **ORD-23 – Coordinate payment and stock reservation:** The system handles payment attempts and the 10-minute stock reservation without confirming an order that cannot be fulfilled.
 
-### 5.4 Order Creation and Confirmation
+### 5.4 Order Creation and Confirmation - Conor
 
 - **ORD-24 – Create marketplace order:** The system creates one overall order for the customer's purchase.
 - **ORD-25 – Create producer-specific order elements:** The overall order contains separate order elements for each relevant producer.
@@ -135,7 +135,7 @@ Ordering includes basket management, checkout, payment integration, order confir
 - **ORD-31 – Record producer allocations:** The system records the amount attributable to each producer and the corresponding commission.
 - **ORD-32 – Notify producers:** Each relevant producer is notified of their confirmed order items and quantities.
 
-### 5.5 Audit Records
+### 5.5 Audit Records - Conor
 
 - **ORD-33 – Record transactions:** The system records order references, payment outcomes, order totals, producer allocations, and commission amounts.
 - **ORD-34 – Retain audit records indefinitely:** Audit records are retained indefinitely in the initial release.
@@ -145,7 +145,7 @@ Ordering includes basket management, checkout, payment integration, order confir
 
 **Description:** Enables customers to discover local food products, search the catalogue, assess product availability, and access producer and origin information.
 
-### 6.1 Product Catalogue
+### 6.1 Product Catalogue - Taha
 
 - **EXP-01 – Browse products:** Customers can browse products available through the marketplace.
 - **EXP-02 – Display product information:** Product listings display product names, descriptions, and prices.
@@ -153,18 +153,18 @@ Ordering includes basket management, checkout, payment integration, order confir
 - **EXP-04 – Display availability:** Product listings indicate whether products are available or unavailable.
 - **EXP-05 – Identify unavailable products:** Unavailable products are clearly distinguished so customers can make informed purchasing decisions.
 
-### 6.2 Product Search
+### 6.2 Product Search - Taha
 
 - **EXP-06 – Search by product name:** Customers can search for products by name.
 - **EXP-07 – Display matching results:** The system displays products matching the search.
 - **EXP-08 – Handle empty results:** The system displays an appropriate message when no products match the search.
 
-### 6.3 Product Categories
+### 6.3 Product Categories - Taha
 
 - **EXP-09 – Browse by category:** Customers can browse products within configured categories.
 - **EXP-10 – Filter by food type:** Customers can filter products using categories such as vegetables, dairy, bakery goods, preserves, and seasonal specialities.
 
-### 6.4 Product Origin and Provenance
+### 6.4 Product Origin and Provenance - Conor
 
 - **EXP-11 – View producer details:** Customers can access information about the producer of a product.
 - **EXP-12 – View product origin:** Customers can view available farm or product-origin information.
@@ -175,21 +175,21 @@ Ordering includes basket management, checkout, payment integration, order confir
 
 The marketplace must preserve producer-specific fulfilment arrangements. Producers are responsible for their own delivery or collection operations and for updating the fulfilment status.
 
-### 7.1 Fulfilment Information
+### 7.1 Fulfilment Information - Afia
 
 - **DEL-01 – Display fulfilment method:** The system identifies the applicable delivery or collection method for each producer.
 - **DEL-02 – Display fulfilment instructions:** Customers receive available delivery or collection instructions.
 - **DEL-03 – Preserve producer-specific arrangements:** The system displays the correct fulfilment information for each producer represented in the order.
 - **DEL-04 – Apply preparation lead time:** Fulfilment scheduling, where included, respects the two-business-day preparation rule.
 
-### 7.2 Customer Order Confirmation Summary
+### 7.2 Customer Order Confirmation Summary - Afia
 
 - **DEL-05 – Display order reference:** Customers can view the reference for their confirmed order.
 - **DEL-06 – Display purchased items:** Customers can review the products and quantities included in the order.
 - **DEL-07 – Display order total:** Customers can view the total payable and payment status.
 - **DEL-08 – Display fulfilment details:** Customers can review the relevant delivery or collection arrangements after confirming their order.
 
-### 7.3 Producer Access and Fulfilment Updates
+### 7.3 Producer Access and Fulfilment Updates - Afia
 
 - **DEL-09 – Authenticate producers:** Producers can access the producer-facing functionality through their accounts.
 - **DEL-10 – Restrict producer order access:** Producers can view the order information relevant to their own products and fulfilment responsibilities.
