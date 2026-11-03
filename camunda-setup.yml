@@ -1,3 +1,0 @@
-- name: Camunda 8 Action
-
-  uses: camunda-community-hub/camunda-platform-8-github-action@8.0.0
