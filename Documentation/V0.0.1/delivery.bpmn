@@ -1,0 +1,1564 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" xmlns:color="http://www.omg.org/spec/BPMN/non-normative/color/1.0" id="Definitions_Delivery" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Web Modeler" exporterVersion="e24511c" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.9.0">
+  <bpmn:collaboration id="Collaboration_Delivery">
+    <bpmn:participant id="Pool_Label1" name="1. customer arrangement and confirmation" />
+    <bpmn:participant id="Pool_Customer" name="Customer" processRef="Process_CustomerArrangement" />
+    <bpmn:participant id="Pool_Marketplace" name="Marketplace System" processRef="Process_MarketplaceArrangement" />
+    <bpmn:participant id="Pool_Producer1" name="Producer" processRef="Process_ProducerNotification" />
+    <bpmn:participant id="Pool_Notification" name="Notification Service" processRef="Process_Notification" />
+    <bpmn:participant id="Pool_Label2" name="2. producer fulfilment" />
+    <bpmn:participant id="Pool_Producer2" name="Producer" processRef="Process_ProducerFulfilment" />
+    <bpmn:participant id="Pool_SysMarketplace" name="System Marketplace" processRef="Process_FulfilmentStatusUpdate" />
+    <bpmn:participant id="Pool_Label3" name="3. Customer status tracking" />
+    <bpmn:participant id="Pool_Customer3" name="Customer" processRef="Process_CustomerStatusTracking" />
+    <bpmn:participant id="Pool_Marketplace3" name="Marketplace" processRef="Process_StatusRetrieval" />
+    <bpmn:messageFlow id="MF_Order" name="OrderForMarketplace" sourceRef="Cust_SendOrder" targetRef="MS_Start" />
+    <bpmn:messageFlow id="MF_Pref" name="ArrangementPreference" sourceRef="Cust_SendPref" targetRef="MS_CatchPref" />
+    <bpmn:messageFlow id="MF_Avail" name="ArrangementsAvailable" sourceRef="MS_Display" targetRef="Cust_CatchAvail" />
+    <bpmn:messageFlow id="MF_Confirm" name="ArrangementConfirmed" sourceRef="Cust_Confirm" targetRef="MS_CatchConfirmed" />
+    <bpmn:messageFlow id="MF_Final" name="FinalArrangementsRecorded" sourceRef="MS_Record" targetRef="Cust_CatchFinal" />
+    <bpmn:messageFlow id="MF_Notify" name="NotificationRequested" sourceRef="MS_Notify" targetRef="N_Start" />
+    <bpmn:messageFlow id="MF_Producer" name="ProducerOrderNotification" sourceRef="MS_Store" targetRef="P1_Start" />
+    <bpmn:messageFlow id="MF_Fulfil" sourceRef="P1_End" targetRef="PF_Start" />
+    <bpmn:messageFlow id="MF_Status" name="FulfilmentStatusSubmitted" sourceRef="PF_End" targetRef="SM_Start" />
+    <bpmn:messageFlow id="MF_Request" name="StatusRequested" sourceRef="C3_Request" targetRef="M3_Start" />
+    <bpmn:messageFlow id="MF_Ready" name="StatusReady" sourceRef="M3_Display" targetRef="C3_CatchStatus" />
+  </bpmn:collaboration>
+  <bpmn:process id="Process_CustomerArrangement" name="Customer - Arrangement and Confirmation" isExecutable="true">
+    <bpmn:documentation>Customer side of the delivery arrangement. Started when the payment service reports a successful payment (Case 2). Input variables (message PaymentReceived): orderId, customerId, customerName, customerEmail, orderTotal, orderItems[], paymentReference. The customer reviews the order, chooses delivery or collection, reviews the arrangements offered by the marketplace and confirms.</bpmn:documentation>
+    <bpmn:startEvent id="Cust_Start" name="Payment Received">
+      <bpmn:documentation>Message start event. Published by the (simulated) payment service once payment succeeds. Payload: orderId, customerId, customerName, customerEmail, orderTotal, orderItems[], paymentReference.</bpmn:documentation>
+      <bpmn:outgoing>Flow_Cust_Start__Cust_Fork</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MsgDef_Cust_Start" messageRef="Message_PaymentReceived" />
+    </bpmn:startEvent>
+    <bpmn:parallelGateway id="Cust_Fork" name="Order paid: continue in parallel">
+      <bpmn:documentation>Splits into the customer journey and the hand-over of the order to the marketplace system.</bpmn:documentation>
+      <bpmn:incoming>Flow_Cust_Start__Cust_Fork</bpmn:incoming>
+      <bpmn:outgoing>Flow_Cust_Fork__Cust_ViewOrder</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Cust_Fork__Cust_SendOrder</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:endEvent id="Cust_SendOrder" name="Send order to marketplace">
+      <bpmn:documentation>Message end event (job worker). Publishes OrderForMarketplace, which starts the Marketplace System process. Input: the full paid order. Output: none.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="send-order-to-marketplace" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=customerId" target="customerId" />
+          <zeebe:input source="=customerName" target="customerName" />
+          <zeebe:input source="=customerEmail" target="customerEmail" />
+          <zeebe:input source="=orderTotal" target="orderTotal" />
+          <zeebe:input source="=orderItems" target="orderItems" />
+          <zeebe:input source="=paymentReference" target="paymentReference" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Cust_Fork__Cust_SendOrder</bpmn:incoming>
+      <bpmn:messageEventDefinition id="MsgDef_Cust_SendOrder" messageRef="Message_OrderForMarketplace" />
+    </bpmn:endEvent>
+    <bpmn:userTask id="Cust_ViewOrder" name="view order">
+      <bpmn:documentation>User task. Customer views the paid order (read-only table). Form: Form_ViewOrder. Input: orderId, orderItems, orderTotal. Output: none.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:formDefinition formId="Form_ViewOrder" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=orderItems" target="orderItems" />
+          <zeebe:input source="=orderTotal" target="orderTotal" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Cust_Fork__Cust_ViewOrder</bpmn:incoming>
+      <bpmn:outgoing>Flow_Cust_ViewOrder__Cust_MergeChoose</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Cust_MergeChoose">
+      <bpmn:documentation>Merges the first pass and the change-request loop.</bpmn:documentation>
+      <bpmn:incoming>Flow_Cust_ViewOrder__Cust_MergeChoose</bpmn:incoming>
+      <bpmn:incoming>Flow_Cust_GwAccept__Cust_MergeChoose</bpmn:incoming>
+      <bpmn:outgoing>Flow_Cust_MergeChoose__Cust_Choose</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Cust_Choose" name="Choose delivery or collection">
+      <bpmn:documentation>User task. Customer selects DELIVERY or COLLECTION, preferred date, delivery address (only for delivery) and optional instructions. Form: Form_ChooseMethod. Output: fulfilmentMethod, preferredDate (+ deliveryAddress, deliveryInstructions). Optional form fields are deliberately not mapped; the worker reads them from the job variables.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:formDefinition formId="Form_ChooseMethod" />
+        <zeebe:ioMapping>
+          <zeebe:output source="=fulfilmentMethod" target="fulfilmentMethod" />
+          <zeebe:output source="=preferredDate" target="preferredDate" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Cust_MergeChoose__Cust_Choose</bpmn:incoming>
+      <bpmn:outgoing>Flow_Cust_Choose__Cust_SendPref</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:intermediateThrowEvent id="Cust_SendPref" name="Send arrangement preference">
+      <bpmn:documentation>Message throw event (job worker). Publishes ArrangementPreference to the marketplace system (correlation key orderId). Also sends deliveryAddress and deliveryInstructions if present.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="send-arrangement-preference" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=fulfilmentMethod" target="fulfilmentMethod" />
+          <zeebe:input source="=preferredDate" target="preferredDate" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Cust_Choose__Cust_SendPref</bpmn:incoming>
+      <bpmn:outgoing>Flow_Cust_SendPref__Cust_CatchAvail</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MsgDef_Cust_SendPref" messageRef="Message_ArrangementPreference" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:intermediateCatchEvent id="Cust_CatchAvail" name="Arrangements available">
+      <bpmn:documentation>Message catch event. Waits for the marketplace to publish the available (or alternative) arrangements. Correlation key: orderId. Receives: availableArrangements[], earliestFulfilmentDate, alternativesOffered.</bpmn:documentation>
+      <bpmn:incoming>Flow_Cust_SendPref__Cust_CatchAvail</bpmn:incoming>
+      <bpmn:outgoing>Flow_Cust_CatchAvail__Cust_Review</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MsgDef_Cust_CatchAvail" messageRef="Message_ArrangementsAvailable" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Cust_Review" name="Review available Arrangements">
+      <bpmn:documentation>User task. Customer accepts one of the arrangements or asks to change. Form: Form_ReviewArrangements. Input: availableArrangements[] (drives the select options), earliestFulfilmentDate, alternativesOffered. Output: arrangementDecision (accept | change), selectedArrangement (when accepted).</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:formDefinition formId="Form_ReviewArrangements" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=earliestFulfilmentDate" target="earliestFulfilmentDate" />
+          <zeebe:input source="=alternativesOffered" target="alternativesOffered" />
+          <zeebe:input source="=availableArrangements" target="availableArrangements" />
+          <zeebe:output source="=arrangementDecision" target="arrangementDecision" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Cust_CatchAvail__Cust_Review</bpmn:incoming>
+      <bpmn:outgoing>Flow_Cust_Review__Cust_GwAccept</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Cust_GwAccept" name="Accept Arrangements?" default="Flow_Cust_GwAccept__Cust_MergeChoose">
+      <bpmn:documentation>Exclusive gateway on arrangementDecision. Default flow (change) loops back to choose a different method or date.</bpmn:documentation>
+      <bpmn:incoming>Flow_Cust_Review__Cust_GwAccept</bpmn:incoming>
+      <bpmn:outgoing>Flow_Cust_GwAccept__Cust_Confirm</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Cust_GwAccept__Cust_MergeChoose</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Cust_Confirm" name="Confirm Arrangements">
+      <bpmn:documentation>Service task. Records the customer confirmation and publishes ArrangementConfirmed to the marketplace. Input: orderId, selectedArrangement, fulfilmentMethod. Output: confirmationReference.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="confirm-arrangements" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=selectedArrangement" target="selectedArrangement" />
+          <zeebe:input source="=fulfilmentMethod" target="fulfilmentMethod" />
+          <zeebe:output source="=confirmationReference" target="confirmationReference" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Cust_GwAccept__Cust_Confirm</bpmn:incoming>
+      <bpmn:outgoing>Flow_Cust_Confirm__Cust_CatchFinal</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:intermediateCatchEvent id="Cust_CatchFinal" name="Final arrangements recorded">
+      <bpmn:documentation>Message catch event. Waits until the marketplace has recorded the final arrangements. Receives: finalArrangement{}, producerSummary[].</bpmn:documentation>
+      <bpmn:incoming>Flow_Cust_Confirm__Cust_CatchFinal</bpmn:incoming>
+      <bpmn:outgoing>Flow_Cust_CatchFinal__Cust_ViewFinal</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MsgDef_Cust_CatchFinal" messageRef="Message_FinalArrangementsRecorded" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Cust_ViewFinal" name="View final fulfilment details">
+      <bpmn:documentation>User task. Read-only confirmation of method, date, address, reference and which producer supplies which items. Form: Form_ViewFinalDetails.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:formDefinition formId="Form_ViewFinalDetails" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=finalArrangement" target="finalArrangement" />
+          <zeebe:input source="=producerSummary" target="producerSummary" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Cust_CatchFinal__Cust_ViewFinal</bpmn:incoming>
+      <bpmn:outgoing>Flow_Cust_ViewFinal__Cust_End</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="Cust_End" name="Order Complete">
+      <bpmn:documentation>Arrangement and confirmation finished. Producer fulfilment continues in the producer process.</bpmn:documentation>
+      <bpmn:incoming>Flow_Cust_ViewFinal__Cust_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_Cust_Start__Cust_Fork" sourceRef="Cust_Start" targetRef="Cust_Fork" />
+    <bpmn:sequenceFlow id="Flow_Cust_Fork__Cust_ViewOrder" sourceRef="Cust_Fork" targetRef="Cust_ViewOrder" />
+    <bpmn:sequenceFlow id="Flow_Cust_Fork__Cust_SendOrder" sourceRef="Cust_Fork" targetRef="Cust_SendOrder" />
+    <bpmn:sequenceFlow id="Flow_Cust_ViewOrder__Cust_MergeChoose" sourceRef="Cust_ViewOrder" targetRef="Cust_MergeChoose" />
+    <bpmn:sequenceFlow id="Flow_Cust_MergeChoose__Cust_Choose" sourceRef="Cust_MergeChoose" targetRef="Cust_Choose" />
+    <bpmn:sequenceFlow id="Flow_Cust_Choose__Cust_SendPref" sourceRef="Cust_Choose" targetRef="Cust_SendPref" />
+    <bpmn:sequenceFlow id="Flow_Cust_SendPref__Cust_CatchAvail" sourceRef="Cust_SendPref" targetRef="Cust_CatchAvail" />
+    <bpmn:sequenceFlow id="Flow_Cust_CatchAvail__Cust_Review" sourceRef="Cust_CatchAvail" targetRef="Cust_Review" />
+    <bpmn:sequenceFlow id="Flow_Cust_Review__Cust_GwAccept" sourceRef="Cust_Review" targetRef="Cust_GwAccept" />
+    <bpmn:sequenceFlow id="Flow_Cust_GwAccept__Cust_Confirm" name="Yes" sourceRef="Cust_GwAccept" targetRef="Cust_Confirm">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=arrangementDecision = "accept"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Cust_GwAccept__Cust_MergeChoose" name="No - change" sourceRef="Cust_GwAccept" targetRef="Cust_MergeChoose" />
+    <bpmn:sequenceFlow id="Flow_Cust_Confirm__Cust_CatchFinal" sourceRef="Cust_Confirm" targetRef="Cust_CatchFinal" />
+    <bpmn:sequenceFlow id="Flow_Cust_CatchFinal__Cust_ViewFinal" sourceRef="Cust_CatchFinal" targetRef="Cust_ViewFinal" />
+    <bpmn:sequenceFlow id="Flow_Cust_ViewFinal__Cust_End" sourceRef="Cust_ViewFinal" targetRef="Cust_End" />
+  </bpmn:process>
+  <bpmn:process id="Process_MarketplaceArrangement" name="Marketplace System - Arrangement Processing" isExecutable="true">
+    <bpmn:documentation>System side of the arrangement. Started by message OrderForMarketplace. Identifies the producers, calculates the earliest fulfilment date (2 days), checks the customer preference, offers arrangements or alternatives, waits for confirmation (3 days) and records the final arrangements.</bpmn:documentation>
+    <bpmn:startEvent id="MS_Start" name="Order received">
+      <bpmn:documentation>Message start event. Payload: orderId, customerId, customerName, customerEmail, orderTotal, orderItems[], paymentReference.</bpmn:documentation>
+      <bpmn:outgoing>Flow_MS_Start__MS_Retrieve</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MsgDef_MS_Start" messageRef="Message_OrderForMarketplace" />
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="MS_Retrieve" name="Retrieve Order details">
+      <bpmn:documentation>Service task. Loads/validates the order from the order store. Input: orderId, orderItems. Output: orderItems, orderStatus.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="retrieve-order-details" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=orderItems" target="orderItems" />
+          <zeebe:output source="=orderItems" target="orderItems" />
+          <zeebe:output source="=orderStatus" target="orderStatus" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_MS_Start__MS_Retrieve</bpmn:incoming>
+      <bpmn:outgoing>Flow_MS_Retrieve__MS_Items</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="MS_Items" name="Retrieve Producer-specific order fulfilment items">
+      <bpmn:documentation>Service task. Splits the order into producer-specific elements. Input: orderItems. Output: producerItems[] ({producerId, items[]}).</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="retrieve-producer-items" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderItems" target="orderItems" />
+          <zeebe:output source="=producerItems" target="producerItems" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_MS_Retrieve__MS_Items</bpmn:incoming>
+      <bpmn:outgoing>Flow_MS_Items__MS_Producers</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="MS_Producers" name="Identify relevant Producers">
+      <bpmn:documentation>Service task. Resolves producer details. Input: producerItems. Output: producerFulfilments[] ({producerId, producerName, producerEmail, items[], itemSummary}).</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="identify-producers" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=producerItems" target="producerItems" />
+          <zeebe:output source="=producerFulfilments" target="producerFulfilments" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_MS_Items__MS_Producers</bpmn:incoming>
+      <bpmn:outgoing>Flow_MS_Producers__MS_Calc</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:scriptTask id="MS_Calc" name="Calculate earliest fulfilment date (2 days)">
+      <bpmn:documentation>Script task (FEEL, no worker needed). Business rule: earliest fulfilment is today + 2 days. Output: earliestFulfilmentDate (ISO date).</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:script expression="=string(today() + duration(&#34;P2D&#34;))" resultVariable="earliestFulfilmentDate" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_MS_Producers__MS_Calc</bpmn:incoming>
+      <bpmn:outgoing>Flow_MS_Calc__MS_CatchPref</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:intermediateCatchEvent id="MS_CatchPref" name="Customer preference received">
+      <bpmn:documentation>Message catch event. Receives fulfilmentMethod, preferredDate, deliveryAddress, deliveryInstructions from the customer. Correlation key: orderId.</bpmn:documentation>
+      <bpmn:incoming>Flow_MS_Calc__MS_CatchPref</bpmn:incoming>
+      <bpmn:outgoing>Flow_MS_CatchPref__MS_MergePref</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MsgDef_MS_CatchPref" messageRef="Message_ArrangementPreference" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="MS_MergePref">
+      <bpmn:documentation>Merges the first preference and any later changed preference.</bpmn:documentation>
+      <bpmn:incoming>Flow_MS_CatchPref__MS_MergePref</bpmn:incoming>
+      <bpmn:incoming>Flow_MS_CatchNewPref__MS_MergePref</bpmn:incoming>
+      <bpmn:outgoing>Flow_MS_MergePref__MS_Check</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="MS_Check" name="Check arrangement availability">
+      <bpmn:documentation>Service task (added so the gateway has data). Checks every producer can meet the preferred date. Output: arrangementAvailable, availableArrangements[] ({label, value}), alternativesOffered=false.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="check-arrangement-availability" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=fulfilmentMethod" target="fulfilmentMethod" />
+          <zeebe:input source="=preferredDate" target="preferredDate" />
+          <zeebe:input source="=earliestFulfilmentDate" target="earliestFulfilmentDate" />
+          <zeebe:input source="=producerFulfilments" target="producerFulfilments" />
+          <zeebe:output source="=arrangementAvailable" target="arrangementAvailable" />
+          <zeebe:output source="=availableArrangements" target="availableArrangements" />
+          <zeebe:output source="=alternativesOffered" target="alternativesOffered" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_MS_MergePref__MS_Check</bpmn:incoming>
+      <bpmn:outgoing>Flow_MS_Check__MS_GwAvail</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="MS_GwAvail" name="Arrangement Available?" default="Flow_MS_GwAvail__MS_Inform">
+      <bpmn:documentation>Exclusive gateway on arrangementAvailable.</bpmn:documentation>
+      <bpmn:incoming>Flow_MS_Check__MS_GwAvail</bpmn:incoming>
+      <bpmn:outgoing>Flow_MS_GwAvail__MS_MergeAvail</bpmn:outgoing>
+      <bpmn:outgoing>Flow_MS_GwAvail__MS_Inform</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="MS_Inform" name="Inform customers">
+      <bpmn:documentation>Service task. Tells the customer the preferred arrangement is unavailable. Output: unavailableNoticeSent.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="inform-customer-unavailable" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=customerEmail" target="customerEmail" />
+          <zeebe:input source="=preferredDate" target="preferredDate" />
+          <zeebe:input source="=earliestFulfilmentDate" target="earliestFulfilmentDate" />
+          <zeebe:output source="=unavailableNoticeSent" target="unavailableNoticeSent" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_MS_GwAvail__MS_Inform</bpmn:incoming>
+      <bpmn:outgoing>Flow_MS_Inform__MS_Alt</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="MS_Alt" name="Provide Alternative Arrangements">
+      <bpmn:documentation>Service task. Builds alternative slots from the earliest fulfilment date. Output: availableArrangements[], alternativesOffered=true.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="provide-alternative-arrangements" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=fulfilmentMethod" target="fulfilmentMethod" />
+          <zeebe:input source="=earliestFulfilmentDate" target="earliestFulfilmentDate" />
+          <zeebe:output source="=availableArrangements" target="availableArrangements" />
+          <zeebe:output source="=alternativesOffered" target="alternativesOffered" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_MS_Inform__MS_Alt</bpmn:incoming>
+      <bpmn:outgoing>Flow_MS_Alt__MS_MergeAvail</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="MS_MergeAvail">
+      <bpmn:documentation>Merges the preferred and the alternative arrangement paths.</bpmn:documentation>
+      <bpmn:incoming>Flow_MS_GwAvail__MS_MergeAvail</bpmn:incoming>
+      <bpmn:incoming>Flow_MS_Alt__MS_MergeAvail</bpmn:incoming>
+      <bpmn:outgoing>Flow_MS_MergeAvail__MS_Display</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="MS_Display" name="Display available Arrangements">
+      <bpmn:documentation>Service task. Publishes ArrangementsAvailable to the customer so Review available Arrangements can start. Output: arrangementsPublished.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="display-available-arrangements" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=availableArrangements" target="availableArrangements" />
+          <zeebe:input source="=earliestFulfilmentDate" target="earliestFulfilmentDate" />
+          <zeebe:input source="=alternativesOffered" target="alternativesOffered" />
+          <zeebe:output source="=arrangementsPublished" target="arrangementsPublished" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_MS_MergeAvail__MS_Display</bpmn:incoming>
+      <bpmn:outgoing>Flow_MS_Display__MS_Evb</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:eventBasedGateway id="MS_Evb" name="Customer response?">
+      <bpmn:documentation>Event-based gateway: confirmation, a changed preference, or no answer within 3 days (timer).</bpmn:documentation>
+      <bpmn:incoming>Flow_MS_Display__MS_Evb</bpmn:incoming>
+      <bpmn:outgoing>Flow_MS_Evb__MS_CatchConfirmed</bpmn:outgoing>
+      <bpmn:outgoing>Flow_MS_Evb__MS_CatchNewPref</bpmn:outgoing>
+      <bpmn:outgoing>Flow_MS_Evb__MS_CatchTimeout</bpmn:outgoing>
+    </bpmn:eventBasedGateway>
+    <bpmn:intermediateCatchEvent id="MS_CatchConfirmed" name="Arrangement confirmed">
+      <bpmn:documentation>Message catch event. Receives selectedArrangement, fulfilmentMethod, confirmationReference (+ delivery details).</bpmn:documentation>
+      <bpmn:incoming>Flow_MS_Evb__MS_CatchConfirmed</bpmn:incoming>
+      <bpmn:outgoing>Flow_MS_CatchConfirmed__MS_Record</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MsgDef_MS_CatchConfirmed" messageRef="Message_ArrangementConfirmed" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="MS_CatchNewPref" name="Preference changed">
+      <bpmn:documentation>Message catch event. Customer declined and sent a new preference; flow returns to the availability check.</bpmn:documentation>
+      <bpmn:incoming>Flow_MS_Evb__MS_CatchNewPref</bpmn:incoming>
+      <bpmn:outgoing>Flow_MS_CatchNewPref__MS_MergePref</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MsgDef_MS_CatchNewPref" messageRef="Message_ArrangementPreference" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="MS_CatchTimeout" name="No response (3 days)">
+      <bpmn:documentation>Timer catch event: exception path when the customer does not respond within 3 days.</bpmn:documentation>
+      <bpmn:incoming>Flow_MS_Evb__MS_CatchTimeout</bpmn:incoming>
+      <bpmn:outgoing>Flow_MS_CatchTimeout__MS_Release</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_MS_CatchTimeout">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P3D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:serviceTask id="MS_Release" name="Release order and flag for follow-up">
+      <bpmn:documentation>Service task. Exception path: flags the order for manual follow-up. Output: followUpFlag.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="release-order-flag-followup" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:output source="=followUpFlag" target="followUpFlag" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_MS_CatchTimeout__MS_Release</bpmn:incoming>
+      <bpmn:outgoing>Flow_MS_Release__MS_EndTimeout</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="MS_EndTimeout" name="Arrangement timed out">
+      <bpmn:documentation>Exception end: arrangement not confirmed in time.</bpmn:documentation>
+      <bpmn:incoming>Flow_MS_Release__MS_EndTimeout</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="MS_Record" name="Record final arrangements">
+      <bpmn:documentation>Service task. Stores the agreed arrangement and publishes FinalArrangementsRecorded to the customer. Output: finalArrangement{method, date, slot, address, instructions, reference}, producerSummary[].</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="record-final-arrangements" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=selectedArrangement" target="selectedArrangement" />
+          <zeebe:input source="=fulfilmentMethod" target="fulfilmentMethod" />
+          <zeebe:input source="=confirmationReference" target="confirmationReference" />
+          <zeebe:input source="=producerFulfilments" target="producerFulfilments" />
+          <zeebe:output source="=finalArrangement" target="finalArrangement" />
+          <zeebe:output source="=producerSummary" target="producerSummary" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_MS_CatchConfirmed__MS_Record</bpmn:incoming>
+      <bpmn:outgoing>Flow_MS_Record__MS_Notify</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sendTask id="MS_Notify" name="Notify relevant producers and customers">
+      <bpmn:documentation>Send task. Publishes NotificationRequested which starts the Notification Service process. Output: notificationRequested.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="notify-producers-customers" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=customerEmail" target="customerEmail" />
+          <zeebe:input source="=customerName" target="customerName" />
+          <zeebe:input source="=producerFulfilments" target="producerFulfilments" />
+          <zeebe:input source="=finalArrangement" target="finalArrangement" />
+          <zeebe:output source="=notificationRequested" target="notificationRequested" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_MS_Record__MS_Notify</bpmn:incoming>
+      <bpmn:outgoing>Flow_MS_Notify__MS_Store</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:sendTask id="MS_Store" name="store arrangements and notification pop-up">
+      <bpmn:documentation>Send task. Persists the arrangements, raises the in-app pop-up and publishes ProducerOrderNotification once per producer. Output: arrangementsStored.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="store-arrangements" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=customerName" target="customerName" />
+          <zeebe:input source="=customerEmail" target="customerEmail" />
+          <zeebe:input source="=producerFulfilments" target="producerFulfilments" />
+          <zeebe:input source="=finalArrangement" target="finalArrangement" />
+          <zeebe:output source="=arrangementsStored" target="arrangementsStored" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_MS_Notify__MS_Store</bpmn:incoming>
+      <bpmn:outgoing>Flow_MS_Store__MS_End</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="MS_End" name="Arrangements recorded">
+      <bpmn:documentation>Arrangements stored and producers notified.</bpmn:documentation>
+      <bpmn:incoming>Flow_MS_Store__MS_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_MS_Start__MS_Retrieve" sourceRef="MS_Start" targetRef="MS_Retrieve" />
+    <bpmn:sequenceFlow id="Flow_MS_Retrieve__MS_Items" sourceRef="MS_Retrieve" targetRef="MS_Items" />
+    <bpmn:sequenceFlow id="Flow_MS_Items__MS_Producers" sourceRef="MS_Items" targetRef="MS_Producers" />
+    <bpmn:sequenceFlow id="Flow_MS_Producers__MS_Calc" sourceRef="MS_Producers" targetRef="MS_Calc" />
+    <bpmn:sequenceFlow id="Flow_MS_Calc__MS_CatchPref" sourceRef="MS_Calc" targetRef="MS_CatchPref" />
+    <bpmn:sequenceFlow id="Flow_MS_CatchPref__MS_MergePref" sourceRef="MS_CatchPref" targetRef="MS_MergePref" />
+    <bpmn:sequenceFlow id="Flow_MS_MergePref__MS_Check" sourceRef="MS_MergePref" targetRef="MS_Check" />
+    <bpmn:sequenceFlow id="Flow_MS_Check__MS_GwAvail" sourceRef="MS_Check" targetRef="MS_GwAvail" />
+    <bpmn:sequenceFlow id="Flow_MS_GwAvail__MS_MergeAvail" name="Yes" sourceRef="MS_GwAvail" targetRef="MS_MergeAvail">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=arrangementAvailable</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_MS_GwAvail__MS_Inform" name="No" sourceRef="MS_GwAvail" targetRef="MS_Inform" />
+    <bpmn:sequenceFlow id="Flow_MS_Inform__MS_Alt" sourceRef="MS_Inform" targetRef="MS_Alt" />
+    <bpmn:sequenceFlow id="Flow_MS_Alt__MS_MergeAvail" sourceRef="MS_Alt" targetRef="MS_MergeAvail" />
+    <bpmn:sequenceFlow id="Flow_MS_MergeAvail__MS_Display" sourceRef="MS_MergeAvail" targetRef="MS_Display" />
+    <bpmn:sequenceFlow id="Flow_MS_Display__MS_Evb" sourceRef="MS_Display" targetRef="MS_Evb" />
+    <bpmn:sequenceFlow id="Flow_MS_Evb__MS_CatchConfirmed" sourceRef="MS_Evb" targetRef="MS_CatchConfirmed" />
+    <bpmn:sequenceFlow id="Flow_MS_Evb__MS_CatchNewPref" sourceRef="MS_Evb" targetRef="MS_CatchNewPref" />
+    <bpmn:sequenceFlow id="Flow_MS_Evb__MS_CatchTimeout" sourceRef="MS_Evb" targetRef="MS_CatchTimeout" />
+    <bpmn:sequenceFlow id="Flow_MS_CatchConfirmed__MS_Record" sourceRef="MS_CatchConfirmed" targetRef="MS_Record" />
+    <bpmn:sequenceFlow id="Flow_MS_Record__MS_Notify" sourceRef="MS_Record" targetRef="MS_Notify" />
+    <bpmn:sequenceFlow id="Flow_MS_Notify__MS_Store" sourceRef="MS_Notify" targetRef="MS_Store" />
+    <bpmn:sequenceFlow id="Flow_MS_Store__MS_End" sourceRef="MS_Store" targetRef="MS_End" />
+    <bpmn:sequenceFlow id="Flow_MS_CatchNewPref__MS_MergePref" sourceRef="MS_CatchNewPref" targetRef="MS_MergePref" />
+    <bpmn:sequenceFlow id="Flow_MS_CatchTimeout__MS_Release" sourceRef="MS_CatchTimeout" targetRef="MS_Release" />
+    <bpmn:sequenceFlow id="Flow_MS_Release__MS_EndTimeout" sourceRef="MS_Release" targetRef="MS_EndTimeout" />
+  </bpmn:process>
+  <bpmn:process id="Process_ProducerNotification" name="Producer - Receive Order Notification" isExecutable="true">
+    <bpmn:documentation>Started once per producer by message ProducerOrderNotification. The producer acknowledges the new order, then fulfilment starts.</bpmn:documentation>
+    <bpmn:startEvent id="P1_Start" name="Producer order notification">
+      <bpmn:documentation>Message start event. Payload: orderId, producerFulfilment{producerId, producerName, items[]}, finalArrangement{}, customerName, customerEmail.</bpmn:documentation>
+      <bpmn:outgoing>Flow_P1_Start__P1_Receive</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MsgDef_P1_Start" messageRef="Message_ProducerOrderNotification" />
+    </bpmn:startEvent>
+    <bpmn:userTask id="P1_Receive" name="Receive notification">
+      <bpmn:documentation>User task. Producer reads the new order and acknowledges it. Form: Form_ProducerNotification. Output: notificationAcknowledged.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:formDefinition formId="Form_ProducerNotification" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=producerFulfilment" target="producerFulfilment" />
+          <zeebe:input source="=finalArrangement" target="finalArrangement" />
+          <zeebe:output source="=notificationAcknowledged" target="notificationAcknowledged" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_P1_Start__P1_Receive</bpmn:incoming>
+      <bpmn:outgoing>Flow_P1_Receive__P1_End</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="P1_End" name="Producer Notified">
+      <bpmn:documentation>Message end event (job worker). Publishes ProducerFulfilmentStarted which starts the Producer Fulfilment process for this producer.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="start-producer-fulfilment" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=producerFulfilment" target="producerFulfilment" />
+          <zeebe:input source="=finalArrangement" target="finalArrangement" />
+          <zeebe:input source="=customerName" target="customerName" />
+          <zeebe:input source="=customerEmail" target="customerEmail" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_P1_Receive__P1_End</bpmn:incoming>
+      <bpmn:messageEventDefinition id="MsgDef_P1_End" messageRef="Message_ProducerFulfilmentStarted" />
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_P1_Start__P1_Receive" sourceRef="P1_Start" targetRef="P1_Receive" />
+    <bpmn:sequenceFlow id="Flow_P1_Receive__P1_End" sourceRef="P1_Receive" targetRef="P1_End" />
+  </bpmn:process>
+  <bpmn:process id="Process_Notification" name="Notification Service" isExecutable="true">
+    <bpmn:documentation>Reusable notification service with retry and escalation. Started by message NotificationRequested (orderId, customerEmail, customerName, producerFulfilments[], finalArrangement{}).</bpmn:documentation>
+    <bpmn:startEvent id="N_Start" name="Notification requested">
+      <bpmn:documentation>Message start event. Payload: orderId, customerEmail, customerName, producerFulfilments[], finalArrangement{}.</bpmn:documentation>
+      <bpmn:outgoing>Flow_N_Start__N_Merge</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MsgDef_N_Start" messageRef="Message_NotificationRequested" />
+    </bpmn:startEvent>
+    <bpmn:exclusiveGateway id="N_Merge">
+      <bpmn:documentation>Merges the first attempt and retries.</bpmn:documentation>
+      <bpmn:incoming>Flow_N_Start__N_Merge</bpmn:incoming>
+      <bpmn:incoming>Flow_N_GwRetry__N_Merge</bpmn:incoming>
+      <bpmn:outgoing>Flow_N_Merge__N_Ready</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="N_Ready" name="Ready notification">
+      <bpmn:documentation>Service task. Builds the customer and producer messages and increments the attempt counter. Output: notificationPayload, attempts.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="prepare-notification" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=customerEmail" target="customerEmail" />
+          <zeebe:input source="=customerName" target="customerName" />
+          <zeebe:input source="=producerFulfilments" target="producerFulfilments" />
+          <zeebe:input source="=finalArrangement" target="finalArrangement" />
+          <zeebe:output source="=notificationPayload" target="notificationPayload" />
+          <zeebe:output source="=attempts" target="attempts" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_N_Merge__N_Ready</bpmn:incoming>
+      <bpmn:outgoing>Flow_N_Ready__N_Send</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sendTask id="N_Send" name="Send notifications (to customer to Producers)">
+      <bpmn:documentation>Send task to the external e-mail/in-app service (simulated). Output: notificationSent (boolean).</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="send-notifications" retries="3" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=notificationPayload" target="notificationPayload" />
+          <zeebe:output source="=notificationSent" target="notificationSent" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_N_Ready__N_Send</bpmn:incoming>
+      <bpmn:outgoing>Flow_N_Send__N_GwOk</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:exclusiveGateway id="N_GwOk" name="Notification successful?" default="Flow_N_GwOk__N_GwRetry">
+      <bpmn:documentation>Exclusive gateway on notificationSent.</bpmn:documentation>
+      <bpmn:incoming>Flow_N_Send__N_GwOk</bpmn:incoming>
+      <bpmn:outgoing>Flow_N_GwOk__N_Success</bpmn:outgoing>
+      <bpmn:outgoing>Flow_N_GwOk__N_GwRetry</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="N_Success" name="Notification successful">
+      <bpmn:documentation>Service task. Logs successful delivery. Output: notificationStatus = SENT.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="record-notification-success" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:output source="=notificationStatus" target="notificationStatus" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_N_GwOk__N_Success</bpmn:incoming>
+      <bpmn:outgoing>Flow_N_Success__N_EndOk</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="N_EndOk" name="Notification complete">
+      <bpmn:incoming>Flow_N_Success__N_EndOk</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:exclusiveGateway id="N_GwRetry" name="Retry (max 3 attempts)?" default="Flow_N_GwRetry__N_Flag">
+      <bpmn:documentation>Exclusive gateway: retry while attempts &lt; 3, otherwise escalate.</bpmn:documentation>
+      <bpmn:incoming>Flow_N_GwOk__N_GwRetry</bpmn:incoming>
+      <bpmn:outgoing>Flow_N_GwRetry__N_Merge</bpmn:outgoing>
+      <bpmn:outgoing>Flow_N_GwRetry__N_Flag</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="N_Flag" name="Flag failure and escalate (if needed)">
+      <bpmn:documentation>Service task. Exception path: raises an escalation for manual follow-up. Output: escalationRef.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="flag-notification-failure" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=attempts" target="attempts" />
+          <zeebe:output source="=escalationRef" target="escalationRef" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_N_GwRetry__N_Flag</bpmn:incoming>
+      <bpmn:outgoing>Flow_N_Flag__N_EndFail</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="N_EndFail" name="Notification failed">
+      <bpmn:incoming>Flow_N_Flag__N_EndFail</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_N_Start__N_Merge" sourceRef="N_Start" targetRef="N_Merge" />
+    <bpmn:sequenceFlow id="Flow_N_Merge__N_Ready" sourceRef="N_Merge" targetRef="N_Ready" />
+    <bpmn:sequenceFlow id="Flow_N_Ready__N_Send" sourceRef="N_Ready" targetRef="N_Send" />
+    <bpmn:sequenceFlow id="Flow_N_Send__N_GwOk" sourceRef="N_Send" targetRef="N_GwOk" />
+    <bpmn:sequenceFlow id="Flow_N_GwOk__N_Success" name="Yes" sourceRef="N_GwOk" targetRef="N_Success">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=notificationSent</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_N_GwOk__N_GwRetry" name="No" sourceRef="N_GwOk" targetRef="N_GwRetry" />
+    <bpmn:sequenceFlow id="Flow_N_Success__N_EndOk" sourceRef="N_Success" targetRef="N_EndOk" />
+    <bpmn:sequenceFlow id="Flow_N_GwRetry__N_Merge" name="Yes" sourceRef="N_GwRetry" targetRef="N_Merge">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=attempts &lt; 3</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_N_GwRetry__N_Flag" name="No" sourceRef="N_GwRetry" targetRef="N_Flag" />
+    <bpmn:sequenceFlow id="Flow_N_Flag__N_EndFail" sourceRef="N_Flag" targetRef="N_EndFail" />
+  </bpmn:process>
+  <bpmn:process id="Process_ProducerFulfilment" name="Producer - Fulfilment" isExecutable="true">
+    <bpmn:documentation>Per-producer fulfilment. Started by message ProducerFulfilmentStarted (orderId, producerFulfilment{}, finalArrangement{}, customerName, customerEmail). Ends by submitting a fulfilment status to the marketplace.</bpmn:documentation>
+    <bpmn:startEvent id="PF_Start" name="Fulfilment started">
+      <bpmn:documentation>Message start event. Payload: orderId, producerFulfilment{producerId, producerName, items[]}, finalArrangement{}, customerName, customerEmail.</bpmn:documentation>
+      <bpmn:outgoing>Flow_PF_Start__PF_Login</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MsgDef_PF_Start" messageRef="Message_ProducerFulfilmentStarted" />
+    </bpmn:startEvent>
+    <bpmn:userTask id="PF_Login" name="log in producer account">
+      <bpmn:documentation>User task. Producer identifies their account. Form: Form_ProducerLogin. Output: producerAccountId (checked later by validate-producer-authorisation).</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:formDefinition formId="Form_ProducerLogin" />
+        <zeebe:ioMapping>
+          <zeebe:output source="=producerAccountId" target="producerAccountId" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_PF_Start__PF_Login</bpmn:incoming>
+      <bpmn:outgoing>Flow_PF_Login__PF_Orders</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="PF_Orders" name="View confirmed orders for products">
+      <bpmn:documentation>User task. Shows items, method, date and address for this producer. Form: Form_ProducerOrders (read-only).</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:formDefinition formId="Form_ProducerOrders" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=producerFulfilment" target="producerFulfilment" />
+          <zeebe:input source="=finalArrangement" target="finalArrangement" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_PF_Login__PF_Orders</bpmn:incoming>
+      <bpmn:outgoing>Flow_PF_Orders__PF_Prepare</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="PF_Prepare" name="prepare order items">
+      <bpmn:documentation>User task. Producer confirms items are prepared. Form: Form_PrepareItems. Output: allItemsPrepared (+ optional preparationNotes).</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:formDefinition formId="Form_PrepareItems" />
+        <zeebe:ioMapping>
+          <zeebe:output source="=allItemsPrepared" target="allItemsPrepared" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_PF_Orders__PF_Prepare</bpmn:incoming>
+      <bpmn:outgoing>Flow_PF_Prepare__PF_Deliver</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="PF_Deliver" name="Deliver items">
+      <bpmn:documentation>User task. Producer records the hand-over (delivery or collection). Form: Form_DeliverItems. Output: handoverDate (+ optional trackingReference, handoverNote).</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:formDefinition formId="Form_DeliverItems" />
+        <zeebe:ioMapping>
+          <zeebe:output source="=handoverDate" target="handoverDate" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_PF_Prepare__PF_Deliver</bpmn:incoming>
+      <bpmn:outgoing>Flow_PF_Deliver__PF_Submit</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="PF_Submit" name="Submit fulfilment status update">
+      <bpmn:documentation>User task. Producer submits DELIVERED, COLLECTED or FAILED. Form: Form_FulfilmentStatus. Output: fulfilmentStatus (+ optional statusNote).</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:formDefinition formId="Form_FulfilmentStatus" />
+        <zeebe:ioMapping>
+          <zeebe:output source="=fulfilmentStatus" target="fulfilmentStatus" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_PF_Deliver__PF_Submit</bpmn:incoming>
+      <bpmn:outgoing>Flow_PF_Submit__PF_End</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="PF_End" name="Fulfilment status submitted">
+      <bpmn:documentation>Message end event (job worker). Publishes FulfilmentStatusSubmitted to the System Marketplace process.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="submit-fulfilment-status" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=producerAccountId" target="producerAccountId" />
+          <zeebe:input source="=producerFulfilment" target="producerFulfilment" />
+          <zeebe:input source="=fulfilmentStatus" target="fulfilmentStatus" />
+          <zeebe:input source="=handoverDate" target="handoverDate" />
+          <zeebe:input source="=customerEmail" target="customerEmail" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_PF_Submit__PF_End</bpmn:incoming>
+      <bpmn:messageEventDefinition id="MsgDef_PF_End" messageRef="Message_FulfilmentStatusSubmitted" />
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_PF_Start__PF_Login" sourceRef="PF_Start" targetRef="PF_Login" />
+    <bpmn:sequenceFlow id="Flow_PF_Login__PF_Orders" sourceRef="PF_Login" targetRef="PF_Orders" />
+    <bpmn:sequenceFlow id="Flow_PF_Orders__PF_Prepare" sourceRef="PF_Orders" targetRef="PF_Prepare" />
+    <bpmn:sequenceFlow id="Flow_PF_Prepare__PF_Deliver" sourceRef="PF_Prepare" targetRef="PF_Deliver" />
+    <bpmn:sequenceFlow id="Flow_PF_Deliver__PF_Submit" sourceRef="PF_Deliver" targetRef="PF_Submit" />
+    <bpmn:sequenceFlow id="Flow_PF_Submit__PF_End" sourceRef="PF_Submit" targetRef="PF_End" />
+  </bpmn:process>
+  <bpmn:process id="Process_FulfilmentStatusUpdate" name="System Marketplace - Fulfilment Status Update" isExecutable="true">
+    <bpmn:documentation>Started by message FulfilmentStatusSubmitted. Authenticates and validates the producer, saves or rejects the update and notifies the customer.</bpmn:documentation>
+    <bpmn:startEvent id="SM_Start" name="Fulfilment update received">
+      <bpmn:documentation>Message start event. Payload: orderId, producerAccountId, producerFulfilment{}, fulfilmentStatus, handoverDate, customerEmail.</bpmn:documentation>
+      <bpmn:outgoing>Flow_SM_Start__SM_Auth</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MsgDef_SM_Start" messageRef="Message_FulfilmentStatusSubmitted" />
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="SM_Auth" name="Authenticate producer and get order items and options">
+      <bpmn:documentation>Service task. Authenticates the producer account and loads the producer items. Output: producerAuthenticated, orderItemsAndOptions.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="authenticate-producer" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=producerAccountId" target="producerAccountId" />
+          <zeebe:input source="=producerFulfilment" target="producerFulfilment" />
+          <zeebe:output source="=producerAuthenticated" target="producerAuthenticated" />
+          <zeebe:output source="=orderItemsAndOptions" target="orderItemsAndOptions" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_SM_Start__SM_Auth</bpmn:incoming>
+      <bpmn:outgoing>Flow_SM_Auth__SM_Validate</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="SM_Validate" name="Validate producer Authorisation">
+      <bpmn:documentation>Service task. Checks the account may update this producer's items. Output: producerAuthorised.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="validate-producer-authorisation" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=producerAccountId" target="producerAccountId" />
+          <zeebe:input source="=producerFulfilment" target="producerFulfilment" />
+          <zeebe:input source="=producerAuthenticated" target="producerAuthenticated" />
+          <zeebe:output source="=producerAuthorised" target="producerAuthorised" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_SM_Auth__SM_Validate</bpmn:incoming>
+      <bpmn:outgoing>Flow_SM_Validate__SM_GwAuth</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="SM_GwAuth" name="Producer authorised?" default="Flow_SM_GwAuth__SM_Reject">
+      <bpmn:documentation>Exclusive gateway on producerAuthorised. Default: reject.</bpmn:documentation>
+      <bpmn:incoming>Flow_SM_Validate__SM_GwAuth</bpmn:incoming>
+      <bpmn:outgoing>Flow_SM_GwAuth__SM_Save</bpmn:outgoing>
+      <bpmn:outgoing>Flow_SM_GwAuth__SM_Reject</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="SM_Save" name="save fulfilment status">
+      <bpmn:documentation>Service task. Persists the status per producer. Output: fulfilmentRecord, updateOutcome = ACCEPTED.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="save-fulfilment-status" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=producerFulfilment" target="producerFulfilment" />
+          <zeebe:input source="=fulfilmentStatus" target="fulfilmentStatus" />
+          <zeebe:input source="=handoverDate" target="handoverDate" />
+          <zeebe:output source="=fulfilmentRecord" target="fulfilmentRecord" />
+          <zeebe:output source="=updateOutcome" target="updateOutcome" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_SM_GwAuth__SM_Save</bpmn:incoming>
+      <bpmn:outgoing>Flow_SM_Save__SM_Merge</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="SM_Reject" name="Reject update">
+      <bpmn:documentation>Service task. Exception path: rejects an unauthorised update. Output: rejectionReason, updateOutcome = REJECTED.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="reject-fulfilment-update" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=producerAccountId" target="producerAccountId" />
+          <zeebe:output source="=rejectionReason" target="rejectionReason" />
+          <zeebe:output source="=updateOutcome" target="updateOutcome" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_SM_GwAuth__SM_Reject</bpmn:incoming>
+      <bpmn:outgoing>Flow_SM_Reject__SM_Merge</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="SM_Merge">
+      <bpmn:documentation>Merges accepted and rejected paths.</bpmn:documentation>
+      <bpmn:incoming>Flow_SM_Save__SM_Merge</bpmn:incoming>
+      <bpmn:incoming>Flow_SM_Reject__SM_Merge</bpmn:incoming>
+      <bpmn:outgoing>Flow_SM_Merge__SM_Notify</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="SM_Notify" name="Notify customers">
+      <bpmn:documentation>Service task. Tells the customer the latest status. Output: customerNotified.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="notify-customers-fulfilment-update" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=customerEmail" target="customerEmail" />
+          <zeebe:input source="=fulfilmentStatus" target="fulfilmentStatus" />
+          <zeebe:input source="=updateOutcome" target="updateOutcome" />
+          <zeebe:output source="=customerNotified" target="customerNotified" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_SM_Merge__SM_Notify</bpmn:incoming>
+      <bpmn:outgoing>Flow_SM_Notify__SM_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="SM_End" name="Fulfilment update complete">
+      <bpmn:incoming>Flow_SM_Notify__SM_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_SM_Start__SM_Auth" sourceRef="SM_Start" targetRef="SM_Auth" />
+    <bpmn:sequenceFlow id="Flow_SM_Auth__SM_Validate" sourceRef="SM_Auth" targetRef="SM_Validate" />
+    <bpmn:sequenceFlow id="Flow_SM_Validate__SM_GwAuth" sourceRef="SM_Validate" targetRef="SM_GwAuth" />
+    <bpmn:sequenceFlow id="Flow_SM_GwAuth__SM_Save" name="Yes" sourceRef="SM_GwAuth" targetRef="SM_Save">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=producerAuthorised</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_SM_GwAuth__SM_Reject" name="No" sourceRef="SM_GwAuth" targetRef="SM_Reject" />
+    <bpmn:sequenceFlow id="Flow_SM_Save__SM_Merge" sourceRef="SM_Save" targetRef="SM_Merge" />
+    <bpmn:sequenceFlow id="Flow_SM_Reject__SM_Merge" sourceRef="SM_Reject" targetRef="SM_Merge" />
+    <bpmn:sequenceFlow id="Flow_SM_Merge__SM_Notify" sourceRef="SM_Merge" targetRef="SM_Notify" />
+    <bpmn:sequenceFlow id="Flow_SM_Notify__SM_End" sourceRef="SM_Notify" targetRef="SM_End" />
+  </bpmn:process>
+  <bpmn:process id="Process_CustomerStatusTracking" name="Customer - Status Tracking" isExecutable="true">
+    <bpmn:documentation>Customer-initiated. Started from Tasklist with the start form (orderId, customerEmail). Requests the latest status and displays it per producer.</bpmn:documentation>
+    <bpmn:startEvent id="C3_Start" name="view order">
+      <bpmn:documentation>None start event with a start form (Form_StatusRequest). Input: orderId, customerEmail.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:formDefinition formId="Form_StatusRequest" />
+      </bpmn:extensionElements>
+      <bpmn:outgoing>Flow_C3_Start__C3_Request</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:intermediateThrowEvent id="C3_Request" name="Request latest status">
+      <bpmn:documentation>Message throw event (job worker). Publishes StatusRequested to the marketplace.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="request-latest-status" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=customerEmail" target="customerEmail" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_C3_Start__C3_Request</bpmn:incoming>
+      <bpmn:outgoing>Flow_C3_Request__C3_CatchStatus</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MsgDef_C3_Request" messageRef="Message_StatusRequested" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:intermediateCatchEvent id="C3_CatchStatus" name="Latest status received">
+      <bpmn:documentation>Message catch event. Receives statusRows[] (producerName, status, updatedAt, note). Correlation key: orderId.</bpmn:documentation>
+      <bpmn:incoming>Flow_C3_Request__C3_CatchStatus</bpmn:incoming>
+      <bpmn:outgoing>Flow_C3_CatchStatus__C3_View</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MsgDef_C3_CatchStatus" messageRef="Message_StatusReady" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="C3_View" name="View latest fulfilment status (for each producer)">
+      <bpmn:documentation>User task. Read-only table of the latest fulfilment status for each producer. Form: Form_ViewStatus.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:formDefinition formId="Form_ViewStatus" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=statusRows" target="statusRows" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_C3_CatchStatus__C3_View</bpmn:incoming>
+      <bpmn:outgoing>Flow_C3_View__C3_End</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="C3_End" name="Status viewed">
+      <bpmn:incoming>Flow_C3_View__C3_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_C3_Start__C3_Request" sourceRef="C3_Start" targetRef="C3_Request" />
+    <bpmn:sequenceFlow id="Flow_C3_Request__C3_CatchStatus" sourceRef="C3_Request" targetRef="C3_CatchStatus" />
+    <bpmn:sequenceFlow id="Flow_C3_CatchStatus__C3_View" sourceRef="C3_CatchStatus" targetRef="C3_View" />
+    <bpmn:sequenceFlow id="Flow_C3_View__C3_End" sourceRef="C3_View" targetRef="C3_End" />
+  </bpmn:process>
+  <bpmn:process id="Process_StatusRetrieval" name="Marketplace - Status Retrieval" isExecutable="true">
+    <bpmn:documentation>Started by message StatusRequested. Retrieves and displays the latest producer statuses.</bpmn:documentation>
+    <bpmn:startEvent id="M3_Start" name="Status requested">
+      <bpmn:documentation>Message start event. Payload: orderId, customerEmail.</bpmn:documentation>
+      <bpmn:outgoing>Flow_M3_Start__M3_Retrieve</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MsgDef_M3_Start" messageRef="Message_StatusRequested" />
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="M3_Retrieve" name="Retrieve latest status">
+      <bpmn:documentation>Service task. Reads the latest fulfilment record of each producer. Output: latestStatuses[].</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="retrieve-latest-status" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:output source="=latestStatuses" target="latestStatuses" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_M3_Start__M3_Retrieve</bpmn:incoming>
+      <bpmn:outgoing>Flow_M3_Retrieve__M3_Display</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="M3_Display" name="Display status">
+      <bpmn:documentation>Service task. Formats rows for the form and publishes StatusReady to the customer. Output: statusRows[].</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="display-status" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=latestStatuses" target="latestStatuses" />
+          <zeebe:output source="=statusRows" target="statusRows" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_M3_Retrieve__M3_Display</bpmn:incoming>
+      <bpmn:outgoing>Flow_M3_Display__M3_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="M3_End" name="Customer Complete (status visible)">
+      <bpmn:incoming>Flow_M3_Display__M3_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_M3_Start__M3_Retrieve" sourceRef="M3_Start" targetRef="M3_Retrieve" />
+    <bpmn:sequenceFlow id="Flow_M3_Retrieve__M3_Display" sourceRef="M3_Retrieve" targetRef="M3_Display" />
+    <bpmn:sequenceFlow id="Flow_M3_Display__M3_End" sourceRef="M3_Display" targetRef="M3_End" />
+  </bpmn:process>
+  <bpmn:message id="Message_ArrangementConfirmed" name="ArrangementConfirmed">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=orderId" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_ArrangementPreference" name="ArrangementPreference">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=orderId" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_ArrangementsAvailable" name="ArrangementsAvailable">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=orderId" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_FinalArrangementsRecorded" name="FinalArrangementsRecorded">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=orderId" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_FulfilmentStatusSubmitted" name="FulfilmentStatusSubmitted">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=orderId" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_NotificationRequested" name="NotificationRequested">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=orderId" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_OrderForMarketplace" name="OrderForMarketplace">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=orderId" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_PaymentReceived" name="PaymentReceived">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=orderId" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_ProducerFulfilmentStarted" name="ProducerFulfilmentStarted">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=orderId" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_ProducerOrderNotification" name="ProducerOrderNotification">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=orderId" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_StatusReady" name="StatusReady">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=orderId" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_StatusRequested" name="StatusRequested">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=orderId" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_Delivery">
+      <bpmndi:BPMNShape id="Pool_Label1_di" bpmnElement="Pool_Label1" isHorizontal="true">
+        <dc:Bounds x="160" y="80" width="2610" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Pool_Customer_di" bpmnElement="Pool_Customer" isHorizontal="true" isExpanded="true">
+        <dc:Bounds x="160" y="140" width="2610" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Cust_Start_di" bpmnElement="Cust_Start">
+        <dc:Bounds x="212" y="222" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Cust_Fork_di" bpmnElement="Cust_Fork">
+        <dc:Bounds x="285" y="215" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Cust_SendOrder_di" bpmnElement="Cust_SendOrder" bioc:stroke="#831311" bioc:fill="#ffcdd2" color:background-color="#ffcdd2" color:border-color="#831311">
+        <dc:Bounds x="362" y="332" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Cust_ViewOrder_di" bpmnElement="Cust_ViewOrder">
+        <dc:Bounds x="450" y="200" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Cust_MergeChoose_di" bpmnElement="Cust_MergeChoose" isMarkerVisible="true">
+        <dc:Bounds x="575" y="215" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Cust_Choose_di" bpmnElement="Cust_Choose">
+        <dc:Bounds x="650" y="200" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Cust_SendPref_di" bpmnElement="Cust_SendPref">
+        <dc:Bounds x="1002" y="222" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="989" y="258" width="63" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Cust_CatchAvail_di" bpmnElement="Cust_CatchAvail">
+        <dc:Bounds x="1712" y="222" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Cust_Review_di" bpmnElement="Cust_Review">
+        <dc:Bounds x="1820" y="200" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Cust_GwAccept_di" bpmnElement="Cust_GwAccept" isMarkerVisible="true">
+        <dc:Bounds x="1965" y="215" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Cust_Confirm_di" bpmnElement="Cust_Confirm">
+        <dc:Bounds x="2080" y="200" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Cust_CatchFinal_di" bpmnElement="Cust_CatchFinal">
+        <dc:Bounds x="2252" y="222" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Cust_ViewFinal_di" bpmnElement="Cust_ViewFinal">
+        <dc:Bounds x="2360" y="200" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Cust_End_di" bpmnElement="Cust_End" bioc:stroke="#831311" bioc:fill="#ffcdd2" color:background-color="#ffcdd2" color:border-color="#831311">
+        <dc:Bounds x="2522" y="222" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_Cust_Start__Cust_Fork_di" bpmnElement="Flow_Cust_Start__Cust_Fork">
+        <di:waypoint x="248" y="240" />
+        <di:waypoint x="285" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Cust_Fork__Cust_ViewOrder_di" bpmnElement="Flow_Cust_Fork__Cust_ViewOrder">
+        <di:waypoint x="335" y="240" />
+        <di:waypoint x="450" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Cust_Fork__Cust_SendOrder_di" bpmnElement="Flow_Cust_Fork__Cust_SendOrder">
+        <di:waypoint x="310" y="265" />
+        <di:waypoint x="310" y="350" />
+        <di:waypoint x="362" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Cust_ViewOrder__Cust_MergeChoose_di" bpmnElement="Flow_Cust_ViewOrder__Cust_MergeChoose">
+        <di:waypoint x="550" y="240" />
+        <di:waypoint x="575" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Cust_MergeChoose__Cust_Choose_di" bpmnElement="Flow_Cust_MergeChoose__Cust_Choose">
+        <di:waypoint x="625" y="240" />
+        <di:waypoint x="650" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Cust_Choose__Cust_SendPref_di" bpmnElement="Flow_Cust_Choose__Cust_SendPref">
+        <di:waypoint x="750" y="240" />
+        <di:waypoint x="1002" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Cust_SendPref__Cust_CatchAvail_di" bpmnElement="Flow_Cust_SendPref__Cust_CatchAvail">
+        <di:waypoint x="1038" y="240" />
+        <di:waypoint x="1712" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Cust_CatchAvail__Cust_Review_di" bpmnElement="Flow_Cust_CatchAvail__Cust_Review">
+        <di:waypoint x="1748" y="240" />
+        <di:waypoint x="1820" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Cust_Review__Cust_GwAccept_di" bpmnElement="Flow_Cust_Review__Cust_GwAccept">
+        <di:waypoint x="1920" y="240" />
+        <di:waypoint x="1965" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Cust_GwAccept__Cust_Confirm_di" bpmnElement="Flow_Cust_GwAccept__Cust_Confirm">
+        <di:waypoint x="2015" y="240" />
+        <di:waypoint x="2080" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Cust_GwAccept__Cust_MergeChoose_di" bpmnElement="Flow_Cust_GwAccept__Cust_MergeChoose">
+        <di:waypoint x="1990" y="265" />
+        <di:waypoint x="1990" y="330" />
+        <di:waypoint x="600" y="330" />
+        <di:waypoint x="600" y="265" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Cust_Confirm__Cust_CatchFinal_di" bpmnElement="Flow_Cust_Confirm__Cust_CatchFinal">
+        <di:waypoint x="2180" y="240" />
+        <di:waypoint x="2252" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Cust_CatchFinal__Cust_ViewFinal_di" bpmnElement="Flow_Cust_CatchFinal__Cust_ViewFinal">
+        <di:waypoint x="2288" y="240" />
+        <di:waypoint x="2360" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Cust_ViewFinal__Cust_End_di" bpmnElement="Flow_Cust_ViewFinal__Cust_End">
+        <di:waypoint x="2460" y="240" />
+        <di:waypoint x="2522" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Pool_Marketplace_di" bpmnElement="Pool_Marketplace" isHorizontal="true" isExpanded="true">
+        <dc:Bounds x="160" y="390" width="2610" height="340" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MS_Start_di" bpmnElement="MS_Start">
+        <dc:Bounds x="362" y="512" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MS_Retrieve_di" bpmnElement="MS_Retrieve">
+        <dc:Bounds x="460" y="490" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MS_Items_di" bpmnElement="MS_Items">
+        <dc:Bounds x="590" y="490" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MS_Producers_di" bpmnElement="MS_Producers">
+        <dc:Bounds x="720" y="490" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MS_Calc_di" bpmnElement="MS_Calc">
+        <dc:Bounds x="850" y="490" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MS_CatchPref_di" bpmnElement="MS_CatchPref">
+        <dc:Bounds x="1002" y="512" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MS_MergePref_di" bpmnElement="MS_MergePref" isMarkerVisible="true">
+        <dc:Bounds x="1085" y="505" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MS_Check_di" bpmnElement="MS_Check">
+        <dc:Bounds x="1180" y="490" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MS_GwAvail_di" bpmnElement="MS_GwAvail" isMarkerVisible="true">
+        <dc:Bounds x="1325" y="505" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MS_Inform_di" bpmnElement="MS_Inform">
+        <dc:Bounds x="1300" y="610" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MS_Alt_di" bpmnElement="MS_Alt">
+        <dc:Bounds x="1440" y="610" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MS_MergeAvail_di" bpmnElement="MS_MergeAvail" isMarkerVisible="true">
+        <dc:Bounds x="1575" y="505" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MS_Display_di" bpmnElement="MS_Display">
+        <dc:Bounds x="1680" y="490" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MS_Evb_di" bpmnElement="MS_Evb">
+        <dc:Bounds x="1835" y="505" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MS_CatchConfirmed_di" bpmnElement="MS_CatchConfirmed">
+        <dc:Bounds x="2112" y="512" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MS_CatchNewPref_di" bpmnElement="MS_CatchNewPref">
+        <dc:Bounds x="1972" y="422" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MS_CatchTimeout_di" bpmnElement="MS_CatchTimeout">
+        <dc:Bounds x="1972" y="632" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MS_Release_di" bpmnElement="MS_Release">
+        <dc:Bounds x="2080" y="610" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MS_EndTimeout_di" bpmnElement="MS_EndTimeout" bioc:stroke="#831311" bioc:fill="#ffcdd2" color:background-color="#ffcdd2" color:border-color="#831311">
+        <dc:Bounds x="2252" y="632" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MS_Record_di" bpmnElement="MS_Record">
+        <dc:Bounds x="2220" y="490" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MS_Notify_di" bpmnElement="MS_Notify">
+        <dc:Bounds x="2360" y="490" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MS_Store_di" bpmnElement="MS_Store">
+        <dc:Bounds x="2500" y="490" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MS_End_di" bpmnElement="MS_End" bioc:stroke="#831311" bioc:fill="#ffcdd2" color:background-color="#ffcdd2" color:border-color="#831311">
+        <dc:Bounds x="2672" y="512" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_MS_Start__MS_Retrieve_di" bpmnElement="Flow_MS_Start__MS_Retrieve">
+        <di:waypoint x="398" y="530" />
+        <di:waypoint x="460" y="530" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MS_Retrieve__MS_Items_di" bpmnElement="Flow_MS_Retrieve__MS_Items">
+        <di:waypoint x="560" y="530" />
+        <di:waypoint x="590" y="530" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MS_Items__MS_Producers_di" bpmnElement="Flow_MS_Items__MS_Producers">
+        <di:waypoint x="690" y="530" />
+        <di:waypoint x="720" y="530" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MS_Producers__MS_Calc_di" bpmnElement="Flow_MS_Producers__MS_Calc">
+        <di:waypoint x="820" y="530" />
+        <di:waypoint x="850" y="530" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MS_Calc__MS_CatchPref_di" bpmnElement="Flow_MS_Calc__MS_CatchPref">
+        <di:waypoint x="950" y="530" />
+        <di:waypoint x="1002" y="530" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MS_CatchPref__MS_MergePref_di" bpmnElement="Flow_MS_CatchPref__MS_MergePref">
+        <di:waypoint x="1038" y="530" />
+        <di:waypoint x="1085" y="530" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MS_MergePref__MS_Check_di" bpmnElement="Flow_MS_MergePref__MS_Check">
+        <di:waypoint x="1135" y="530" />
+        <di:waypoint x="1180" y="530" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MS_Check__MS_GwAvail_di" bpmnElement="Flow_MS_Check__MS_GwAvail">
+        <di:waypoint x="1280" y="530" />
+        <di:waypoint x="1325" y="530" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MS_GwAvail__MS_MergeAvail_di" bpmnElement="Flow_MS_GwAvail__MS_MergeAvail">
+        <di:waypoint x="1375" y="530" />
+        <di:waypoint x="1575" y="530" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MS_GwAvail__MS_Inform_di" bpmnElement="Flow_MS_GwAvail__MS_Inform">
+        <di:waypoint x="1350" y="555" />
+        <di:waypoint x="1350" y="610" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MS_Inform__MS_Alt_di" bpmnElement="Flow_MS_Inform__MS_Alt">
+        <di:waypoint x="1400" y="650" />
+        <di:waypoint x="1440" y="650" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MS_Alt__MS_MergeAvail_di" bpmnElement="Flow_MS_Alt__MS_MergeAvail">
+        <di:waypoint x="1540" y="650" />
+        <di:waypoint x="1600" y="650" />
+        <di:waypoint x="1600" y="555" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MS_MergeAvail__MS_Display_di" bpmnElement="Flow_MS_MergeAvail__MS_Display">
+        <di:waypoint x="1625" y="530" />
+        <di:waypoint x="1680" y="530" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MS_Display__MS_Evb_di" bpmnElement="Flow_MS_Display__MS_Evb">
+        <di:waypoint x="1780" y="530" />
+        <di:waypoint x="1835" y="530" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MS_Evb__MS_CatchConfirmed_di" bpmnElement="Flow_MS_Evb__MS_CatchConfirmed">
+        <di:waypoint x="1885" y="530" />
+        <di:waypoint x="2112" y="530" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MS_Evb__MS_CatchNewPref_di" bpmnElement="Flow_MS_Evb__MS_CatchNewPref">
+        <di:waypoint x="1860" y="505" />
+        <di:waypoint x="1860" y="440" />
+        <di:waypoint x="1972" y="440" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MS_Evb__MS_CatchTimeout_di" bpmnElement="Flow_MS_Evb__MS_CatchTimeout">
+        <di:waypoint x="1860" y="555" />
+        <di:waypoint x="1860" y="650" />
+        <di:waypoint x="1972" y="650" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MS_CatchConfirmed__MS_Record_di" bpmnElement="Flow_MS_CatchConfirmed__MS_Record">
+        <di:waypoint x="2148" y="530" />
+        <di:waypoint x="2220" y="530" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MS_Record__MS_Notify_di" bpmnElement="Flow_MS_Record__MS_Notify">
+        <di:waypoint x="2320" y="530" />
+        <di:waypoint x="2360" y="530" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MS_Notify__MS_Store_di" bpmnElement="Flow_MS_Notify__MS_Store">
+        <di:waypoint x="2460" y="530" />
+        <di:waypoint x="2500" y="530" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MS_Store__MS_End_di" bpmnElement="Flow_MS_Store__MS_End">
+        <di:waypoint x="2600" y="530" />
+        <di:waypoint x="2672" y="530" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MS_CatchNewPref__MS_MergePref_di" bpmnElement="Flow_MS_CatchNewPref__MS_MergePref">
+        <di:waypoint x="1990" y="422" />
+        <di:waypoint x="1990" y="405" />
+        <di:waypoint x="1110" y="405" />
+        <di:waypoint x="1110" y="505" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MS_CatchTimeout__MS_Release_di" bpmnElement="Flow_MS_CatchTimeout__MS_Release">
+        <di:waypoint x="2008" y="650" />
+        <di:waypoint x="2080" y="650" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_MS_Release__MS_EndTimeout_di" bpmnElement="Flow_MS_Release__MS_EndTimeout">
+        <di:waypoint x="2180" y="650" />
+        <di:waypoint x="2252" y="650" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Pool_Producer1_di" bpmnElement="Pool_Producer1" isHorizontal="true" isExpanded="true">
+        <dc:Bounds x="160" y="740" width="2610" height="130" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P1_Start_di" bpmnElement="P1_Start">
+        <dc:Bounds x="1682" y="792" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P1_Receive_di" bpmnElement="P1_Receive">
+        <dc:Bounds x="1780" y="770" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P1_End_di" bpmnElement="P1_End" bioc:stroke="#831311" bioc:fill="#ffcdd2" color:background-color="#ffcdd2" color:border-color="#831311">
+        <dc:Bounds x="2632" y="792" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_P1_Start__P1_Receive_di" bpmnElement="Flow_P1_Start__P1_Receive">
+        <di:waypoint x="1718" y="810" />
+        <di:waypoint x="1780" y="810" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_P1_Receive__P1_End_di" bpmnElement="Flow_P1_Receive__P1_End">
+        <di:waypoint x="1880" y="810" />
+        <di:waypoint x="2632" y="810" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Pool_Notification_di" bpmnElement="Pool_Notification" isHorizontal="true" isExpanded="true">
+        <dc:Bounds x="160" y="880" width="2610" height="290" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Start_di" bpmnElement="N_Start">
+        <dc:Bounds x="1402" y="982" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Merge_di" bpmnElement="N_Merge" isMarkerVisible="true">
+        <dc:Bounds x="1475" y="975" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Ready_di" bpmnElement="N_Ready">
+        <dc:Bounds x="1560" y="960" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Send_di" bpmnElement="N_Send">
+        <dc:Bounds x="1710" y="960" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_GwOk_di" bpmnElement="N_GwOk" isMarkerVisible="true">
+        <dc:Bounds x="1865" y="975" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Success_di" bpmnElement="N_Success">
+        <dc:Bounds x="1970" y="960" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_EndOk_di" bpmnElement="N_EndOk" bioc:stroke="#831311" bioc:fill="#ffcdd2" color:background-color="#ffcdd2" color:border-color="#831311">
+        <dc:Bounds x="2142" y="982" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_GwRetry_di" bpmnElement="N_GwRetry" isMarkerVisible="true">
+        <dc:Bounds x="1865" y="1095" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Flag_di" bpmnElement="N_Flag">
+        <dc:Bounds x="1990" y="1080" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_EndFail_di" bpmnElement="N_EndFail" bioc:stroke="#831311" bioc:fill="#ffcdd2" color:background-color="#ffcdd2" color:border-color="#831311">
+        <dc:Bounds x="2162" y="1102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_N_Start__N_Merge_di" bpmnElement="Flow_N_Start__N_Merge">
+        <di:waypoint x="1438" y="1000" />
+        <di:waypoint x="1475" y="1000" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_N_Merge__N_Ready_di" bpmnElement="Flow_N_Merge__N_Ready">
+        <di:waypoint x="1525" y="1000" />
+        <di:waypoint x="1560" y="1000" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_N_Ready__N_Send_di" bpmnElement="Flow_N_Ready__N_Send">
+        <di:waypoint x="1660" y="1000" />
+        <di:waypoint x="1710" y="1000" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_N_Send__N_GwOk_di" bpmnElement="Flow_N_Send__N_GwOk">
+        <di:waypoint x="1810" y="1000" />
+        <di:waypoint x="1865" y="1000" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_N_GwOk__N_Success_di" bpmnElement="Flow_N_GwOk__N_Success">
+        <di:waypoint x="1915" y="1000" />
+        <di:waypoint x="1970" y="1000" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_N_GwOk__N_GwRetry_di" bpmnElement="Flow_N_GwOk__N_GwRetry">
+        <di:waypoint x="1890" y="1025" />
+        <di:waypoint x="1890" y="1095" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_N_Success__N_EndOk_di" bpmnElement="Flow_N_Success__N_EndOk">
+        <di:waypoint x="2070" y="1000" />
+        <di:waypoint x="2142" y="1000" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_N_GwRetry__N_Merge_di" bpmnElement="Flow_N_GwRetry__N_Merge">
+        <di:waypoint x="1865" y="1120" />
+        <di:waypoint x="1500" y="1120" />
+        <di:waypoint x="1500" y="1025" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_N_GwRetry__N_Flag_di" bpmnElement="Flow_N_GwRetry__N_Flag">
+        <di:waypoint x="1915" y="1120" />
+        <di:waypoint x="1990" y="1120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_N_Flag__N_EndFail_di" bpmnElement="Flow_N_Flag__N_EndFail">
+        <di:waypoint x="2090" y="1120" />
+        <di:waypoint x="2162" y="1120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Pool_Label2_di" bpmnElement="Pool_Label2" isHorizontal="true">
+        <dc:Bounds x="160" y="1220" width="2610" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Pool_Producer2_di" bpmnElement="Pool_Producer2" isHorizontal="true" isExpanded="true">
+        <dc:Bounds x="160" y="1280" width="2610" height="170" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PF_Start_di" bpmnElement="PF_Start">
+        <dc:Bounds x="232" y="1352" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PF_Login_di" bpmnElement="PF_Login">
+        <dc:Bounds x="330" y="1330" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PF_Orders_di" bpmnElement="PF_Orders">
+        <dc:Bounds x="480" y="1330" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PF_Prepare_di" bpmnElement="PF_Prepare">
+        <dc:Bounds x="630" y="1330" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PF_Deliver_di" bpmnElement="PF_Deliver">
+        <dc:Bounds x="780" y="1330" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PF_Submit_di" bpmnElement="PF_Submit">
+        <dc:Bounds x="930" y="1330" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PF_End_di" bpmnElement="PF_End" bioc:stroke="#831311" bioc:fill="#ffcdd2" color:background-color="#ffcdd2" color:border-color="#831311">
+        <dc:Bounds x="1112" y="1352" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_PF_Start__PF_Login_di" bpmnElement="Flow_PF_Start__PF_Login">
+        <di:waypoint x="268" y="1370" />
+        <di:waypoint x="330" y="1370" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_PF_Login__PF_Orders_di" bpmnElement="Flow_PF_Login__PF_Orders">
+        <di:waypoint x="430" y="1370" />
+        <di:waypoint x="480" y="1370" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_PF_Orders__PF_Prepare_di" bpmnElement="Flow_PF_Orders__PF_Prepare">
+        <di:waypoint x="580" y="1370" />
+        <di:waypoint x="630" y="1370" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_PF_Prepare__PF_Deliver_di" bpmnElement="Flow_PF_Prepare__PF_Deliver">
+        <di:waypoint x="730" y="1370" />
+        <di:waypoint x="780" y="1370" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_PF_Deliver__PF_Submit_di" bpmnElement="Flow_PF_Deliver__PF_Submit">
+        <di:waypoint x="880" y="1370" />
+        <di:waypoint x="930" y="1370" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_PF_Submit__PF_End_di" bpmnElement="Flow_PF_Submit__PF_End">
+        <di:waypoint x="1030" y="1370" />
+        <di:waypoint x="1112" y="1370" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Pool_SysMarketplace_di" bpmnElement="Pool_SysMarketplace" isHorizontal="true" isExpanded="true">
+        <dc:Bounds x="160" y="1460" width="2610" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SM_Start_di" bpmnElement="SM_Start">
+        <dc:Bounds x="1112" y="1542" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SM_Auth_di" bpmnElement="SM_Auth">
+        <dc:Bounds x="1210" y="1520" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SM_Validate_di" bpmnElement="SM_Validate">
+        <dc:Bounds x="1350" y="1520" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SM_GwAuth_di" bpmnElement="SM_GwAuth" isMarkerVisible="true">
+        <dc:Bounds x="1505" y="1535" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SM_Save_di" bpmnElement="SM_Save">
+        <dc:Bounds x="1620" y="1520" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SM_Reject_di" bpmnElement="SM_Reject">
+        <dc:Bounds x="1620" y="1610" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SM_Merge_di" bpmnElement="SM_Merge" isMarkerVisible="true">
+        <dc:Bounds x="1775" y="1535" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SM_Notify_di" bpmnElement="SM_Notify">
+        <dc:Bounds x="1880" y="1520" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SM_End_di" bpmnElement="SM_End" bioc:stroke="#831311" bioc:fill="#ffcdd2" color:background-color="#ffcdd2" color:border-color="#831311">
+        <dc:Bounds x="2052" y="1542" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_SM_Start__SM_Auth_di" bpmnElement="Flow_SM_Start__SM_Auth">
+        <di:waypoint x="1148" y="1560" />
+        <di:waypoint x="1210" y="1560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SM_Auth__SM_Validate_di" bpmnElement="Flow_SM_Auth__SM_Validate">
+        <di:waypoint x="1310" y="1560" />
+        <di:waypoint x="1350" y="1560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SM_Validate__SM_GwAuth_di" bpmnElement="Flow_SM_Validate__SM_GwAuth">
+        <di:waypoint x="1450" y="1560" />
+        <di:waypoint x="1505" y="1560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SM_GwAuth__SM_Save_di" bpmnElement="Flow_SM_GwAuth__SM_Save">
+        <di:waypoint x="1555" y="1560" />
+        <di:waypoint x="1620" y="1560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SM_GwAuth__SM_Reject_di" bpmnElement="Flow_SM_GwAuth__SM_Reject">
+        <di:waypoint x="1530" y="1585" />
+        <di:waypoint x="1530" y="1650" />
+        <di:waypoint x="1620" y="1650" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SM_Save__SM_Merge_di" bpmnElement="Flow_SM_Save__SM_Merge">
+        <di:waypoint x="1720" y="1560" />
+        <di:waypoint x="1775" y="1560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SM_Reject__SM_Merge_di" bpmnElement="Flow_SM_Reject__SM_Merge">
+        <di:waypoint x="1720" y="1650" />
+        <di:waypoint x="1800" y="1650" />
+        <di:waypoint x="1800" y="1585" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SM_Merge__SM_Notify_di" bpmnElement="Flow_SM_Merge__SM_Notify">
+        <di:waypoint x="1825" y="1560" />
+        <di:waypoint x="1880" y="1560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SM_Notify__SM_End_di" bpmnElement="Flow_SM_Notify__SM_End">
+        <di:waypoint x="1980" y="1560" />
+        <di:waypoint x="2052" y="1560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Pool_Label3_di" bpmnElement="Pool_Label3" isHorizontal="true">
+        <dc:Bounds x="160" y="1750" width="2610" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Pool_Customer3_di" bpmnElement="Pool_Customer3" isHorizontal="true" isExpanded="true">
+        <dc:Bounds x="160" y="1810" width="2610" height="170" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C3_Start_di" bpmnElement="C3_Start">
+        <dc:Bounds x="232" y="1882" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C3_Request_di" bpmnElement="C3_Request">
+        <dc:Bounds x="382" y="1882" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C3_CatchStatus_di" bpmnElement="C3_CatchStatus">
+        <dc:Bounds x="732" y="1882" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="688" y="1918" width="63" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C3_View_di" bpmnElement="C3_View">
+        <dc:Bounds x="850" y="1860" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C3_End_di" bpmnElement="C3_End" bioc:stroke="#831311" bioc:fill="#ffcdd2" color:background-color="#ffcdd2" color:border-color="#831311">
+        <dc:Bounds x="1032" y="1882" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_C3_Start__C3_Request_di" bpmnElement="Flow_C3_Start__C3_Request">
+        <di:waypoint x="268" y="1900" />
+        <di:waypoint x="382" y="1900" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_C3_Request__C3_CatchStatus_di" bpmnElement="Flow_C3_Request__C3_CatchStatus">
+        <di:waypoint x="418" y="1900" />
+        <di:waypoint x="732" y="1900" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_C3_CatchStatus__C3_View_di" bpmnElement="Flow_C3_CatchStatus__C3_View">
+        <di:waypoint x="768" y="1900" />
+        <di:waypoint x="850" y="1900" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_C3_View__C3_End_di" bpmnElement="Flow_C3_View__C3_End">
+        <di:waypoint x="950" y="1900" />
+        <di:waypoint x="1032" y="1900" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Pool_Marketplace3_di" bpmnElement="Pool_Marketplace3" isHorizontal="true" isExpanded="true">
+        <dc:Bounds x="160" y="1990" width="2610" height="200" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M3_Start_di" bpmnElement="M3_Start">
+        <dc:Bounds x="382" y="2072" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M3_Retrieve_di" bpmnElement="M3_Retrieve">
+        <dc:Bounds x="490" y="2050" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M3_Display_di" bpmnElement="M3_Display">
+        <dc:Bounds x="700" y="2050" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M3_End_di" bpmnElement="M3_End" bioc:stroke="#831311" bioc:fill="#ffcdd2" color:background-color="#ffcdd2" color:border-color="#831311">
+        <dc:Bounds x="882" y="2072" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_M3_Start__M3_Retrieve_di" bpmnElement="Flow_M3_Start__M3_Retrieve">
+        <di:waypoint x="418" y="2090" />
+        <di:waypoint x="490" y="2090" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_M3_Retrieve__M3_Display_di" bpmnElement="Flow_M3_Retrieve__M3_Display">
+        <di:waypoint x="590" y="2090" />
+        <di:waypoint x="700" y="2090" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_M3_Display__M3_End_di" bpmnElement="Flow_M3_Display__M3_End">
+        <di:waypoint x="800" y="2090" />
+        <di:waypoint x="882" y="2090" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Order_di" bpmnElement="MF_Order">
+        <di:waypoint x="380" y="368" />
+        <di:waypoint x="380" y="512" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="353" y="430" width="85" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Pref_di" bpmnElement="MF_Pref">
+        <di:waypoint x="1020" y="258" />
+        <di:waypoint x="1020" y="512" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="993" y="375" width="84" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Avail_di" bpmnElement="MF_Avail">
+        <di:waypoint x="1730" y="490" />
+        <di:waypoint x="1730" y="258" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Confirm_di" bpmnElement="MF_Confirm">
+        <di:waypoint x="2130" y="280" />
+        <di:waypoint x="2130" y="512" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Final_di" bpmnElement="MF_Final">
+        <di:waypoint x="2270" y="490" />
+        <di:waypoint x="2270" y="258" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Notify_di" bpmnElement="MF_Notify">
+        <di:waypoint x="2410" y="570" />
+        <di:waypoint x="2410" y="715" />
+        <di:waypoint x="1420" y="715" />
+        <di:waypoint x="1420" y="982" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Producer_di" bpmnElement="MF_Producer">
+        <di:waypoint x="2550" y="570" />
+        <di:waypoint x="2550" y="725" />
+        <di:waypoint x="1700" y="725" />
+        <di:waypoint x="1700" y="792" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Fulfil_di" bpmnElement="MF_Fulfil">
+        <di:waypoint x="2651" y="828" />
+        <di:waypoint x="2670" y="1320" />
+        <di:waypoint x="250" y="1290" />
+        <di:waypoint x="250" y="1352" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Status_di" bpmnElement="MF_Status">
+        <di:waypoint x="1130" y="1388" />
+        <di:waypoint x="1130" y="1542" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Request_di" bpmnElement="MF_Request">
+        <di:waypoint x="400" y="1918" />
+        <di:waypoint x="400" y="2072" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Ready_di" bpmnElement="MF_Ready">
+        <di:waypoint x="750" y="2050" />
+        <di:waypoint x="750" y="1918" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="734" y="1974" width="63" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
