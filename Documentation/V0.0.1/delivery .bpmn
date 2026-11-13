@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" id="Definitions_DeliverySimple" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.9.0">
+  <bpmn:collaboration id="Collaboration_Delivery">
+    <bpmn:participant id="Pool_Delivery" name="Delivery arrangement and fulfilment" processRef="Process_DeliverySimple" />
+  </bpmn:collaboration>
+  <bpmn:process id="Process_DeliverySimple" name="Delivery - arrangement, fulfilment and status" isExecutable="true">
+    <bpmn:documentation>Simplified executable delivery process (one instance per paid order). Customer chooses delivery or collection, the system checks and the customer confirms, each producer in the order prepares its items in parallel, the system checks for unfulfilled items, the customer chooses partial order or cancellation if a producer is unable, a refund is issued, and the customer is notified.</bpmn:documentation>
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_Customer" name="Customer">
+        <bpmn:flowNodeRef>Start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>UT_Choose</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>UT_Review</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_Confirm</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>UT_ViewStatus</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_System" name="Marketplace System">
+        <bpmn:flowNodeRef>Script_Arrange</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Svc_Record</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Script_Shortfall</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_AllReady</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Svc_Refund</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Svc_Notify</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Producer" name="Producer">
+        <bpmn:flowNodeRef>UT_Fulfil</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start" name="Payment received">
+      <bpmn:documentation>Start event. Input variables: orderId, customerName, customerEmail, orderTotal, orderItems[{name, quantity, price, producerId}]. The output mapping derives producerIds (one entry per producer in the order), used later for the parallel producer tasks. Replaces the old 'PaymentReceived' message start so it can be started from a script or Operate.</bpmn:documentation>
+      <bpmn:extensionElements><zeebe:ioMapping><zeebe:output source="=distinct values(orderItems.producerId)" target="producerIds" /></zeebe:ioMapping></bpmn:extensionElements>
+      <bpmn:outgoing>Flow_Start__UT_Choose</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="UT_Choose" name="Choose delivery or collection">
+      <bpmn:documentation>User task (customer). Form: Form_ChooseMethod. Output: fulfilmentMethod (DELIVERY | COLLECTION), preferredDate, deliveryAddress and deliveryInstructions (delivery only).</bpmn:documentation>
+      <bpmn:extensionElements><zeebe:userTask /><zeebe:formDefinition formId="Form_ChooseMethod" /></bpmn:extensionElements>
+      <bpmn:incoming>Flow_Start__UT_Choose</bpmn:incoming>
+      <bpmn:incoming>Flow_Gw_Confirm__UT_Choose</bpmn:incoming>
+      <bpmn:outgoing>Flow_UT_Choose__Script_Arrange</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:scriptTask id="Script_Arrange" name="Check arrangement">
+      <bpmn:documentation>Script task (FEEL). Business rule: producers need 2 days, so a preferred date earlier than today + 2 days is moved to the earliest possible date. Output: arrangement{earliestFulfilmentDate, dateAdjusted, proposedDate}.</bpmn:documentation>
+      <bpmn:extensionElements><zeebe:script expression='={ earliestFulfilmentDate: string(today() + duration("P2D")), dateAdjusted: date(preferredDate) &lt; today() + duration("P2D"), proposedDate: string(if date(preferredDate) &lt; today() + duration("P2D") then today() + duration("P2D") else date(preferredDate)) }' resultVariable="arrangement" /></bpmn:extensionElements>
+      <bpmn:incoming>Flow_UT_Choose__Script_Arrange</bpmn:incoming>
+      <bpmn:outgoing>Flow_Script_Arrange__UT_Review</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:userTask id="UT_Review" name="Review and confirm arrangement">
+      <bpmn:documentation>User task (customer). Form: Form_ReviewArrangement shows method, proposed date and a note if the date was adjusted. Output: arrangementDecision (confirm | change).</bpmn:documentation>
+      <bpmn:extensionElements><zeebe:userTask /><zeebe:formDefinition formId="Form_ReviewArrangement" /><zeebe:ioMapping><zeebe:output source="=arrangementDecision" target="arrangementDecision" /></zeebe:ioMapping></bpmn:extensionElements>
+      <bpmn:incoming>Flow_Script_Arrange__UT_Review</bpmn:incoming>
+      <bpmn:outgoing>Flow_UT_Review__Gw_Confirm</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gw_Confirm" name="Confirmed?" default="Flow_Gw_Confirm__UT_Choose">
+      <bpmn:documentation>confirm continues. Default (change) loops back so the customer can pick another method or date.</bpmn:documentation>
+      <bpmn:incoming>Flow_UT_Review__Gw_Confirm</bpmn:incoming>
+      <bpmn:outgoing>Flow_Gw_Confirm__Svc_Record</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Gw_Confirm__UT_Choose</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Svc_Record" name="Record final arrangements">
+      <bpmn:documentation>Service task (worker). Stores the confirmed method, date and address against the order. Output: confirmationReference.</bpmn:documentation>
+      <bpmn:extensionElements><zeebe:taskDefinition type="record-final-arrangements" retries="3" /><zeebe:ioMapping><zeebe:output source="=confirmationReference" target="confirmationReference" /></zeebe:ioMapping></bpmn:extensionElements>
+      <bpmn:incoming>Flow_Gw_Confirm__Svc_Record</bpmn:incoming>
+      <bpmn:outgoing>Flow_Svc_Record__UT_Fulfil</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="UT_Fulfil" name="Prepare order and update status">
+      <bpmn:documentation>Multi-instance user task: one task per producer in the order (parallel). Form: Form_FulfilmentStatus shows only that producer's items. Output per producer: {producerId, status} with status READY | UNABLE, collected into producerStatuses[].</bpmn:documentation>
+      <bpmn:extensionElements><zeebe:userTask /><zeebe:formDefinition formId="Form_FulfilmentStatus" /><zeebe:ioMapping><zeebe:input source="=orderItems[item.producerId = producerId]" target="producerItems" /><zeebe:output source="=fulfilmentStatus" target="fulfilmentStatus" /></zeebe:ioMapping></bpmn:extensionElements>
+      <bpmn:incoming>Flow_Svc_Record__UT_Fulfil</bpmn:incoming>
+      <bpmn:outgoing>Flow_UT_Fulfil__Script_Shortfall</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics><bpmn:extensionElements><zeebe:loopCharacteristics inputCollection="=producerIds" inputElement="producerId" outputCollection="producerStatuses" outputElement="={producerId: producerId, status: fulfilmentStatus}" /></bpmn:extensionElements></bpmn:multiInstanceLoopCharacteristics>
+    </bpmn:userTask>
+    <bpmn:scriptTask id="Script_Shortfall" name="Check for unfulfilled items">
+      <bpmn:documentation>Script task (FEEL). Output: shortfall{unableProducerIds[], refundAmount (value of the items the unable producers could not supply), allReady}.</bpmn:documentation>
+      <bpmn:extensionElements><zeebe:script expression='={ unableProducerIds: producerStatuses[item.status = "UNABLE"].producerId, refundAmount: sum(for i in orderItems return if list contains(unableProducerIds, i.producerId) then i.price * i.quantity else 0), allReady: count(unableProducerIds) = 0 }' resultVariable="shortfall" /></bpmn:extensionElements>
+      <bpmn:incoming>Flow_UT_Fulfil__Script_Shortfall</bpmn:incoming>
+      <bpmn:outgoing>Flow_Script_Shortfall__Gw_AllReady</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:exclusiveGateway id="Gw_AllReady" name="All producers ready?" default="Flow_Gw_AllReady__Svc_Refund">
+      <bpmn:documentation>yes -&gt; notify the customer. Default (any producer UNABLE) -&gt; automatic partial refund, then notify.</bpmn:documentation>
+      <bpmn:incoming>Flow_Script_Shortfall__Gw_AllReady</bpmn:incoming>
+      <bpmn:outgoing>Flow_Gw_AllReady__Svc_Notify</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Gw_AllReady__Svc_Refund</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Svc_Refund" name="Issue refund">
+      <bpmn:documentation>Service task (worker, simulated payment service). Automatic rule: if any producer is UNABLE, the rest of the order goes ahead and the value of the unavailable items is refunded. Output: refundAmount, refundReference.</bpmn:documentation>
+      <bpmn:extensionElements><zeebe:taskDefinition type="issue-refund" retries="3" /><zeebe:ioMapping><zeebe:input source="=shortfall.refundAmount" target="refundAmount" /><zeebe:output source="=refundAmount" target="refundAmount" /><zeebe:output source="=refundReference" target="refundReference" /></zeebe:ioMapping></bpmn:extensionElements>
+      <bpmn:incoming>Flow_Gw_AllReady__Svc_Refund</bpmn:incoming>
+      <bpmn:outgoing>Flow_Svc_Refund__Svc_Notify</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Svc_Notify" name="Notify customer">
+      <bpmn:documentation>Service task (worker). Sends the customer the outcome (READY | PARTIAL), including any refund. Output: statusMessage.</bpmn:documentation>
+      <bpmn:extensionElements><zeebe:taskDefinition type="notify-customer" retries="3" /><zeebe:ioMapping><zeebe:input source='=if shortfall.allReady then "READY" else "PARTIAL"' target="outcome" /><zeebe:output source="=statusMessage" target="statusMessage" /></zeebe:ioMapping></bpmn:extensionElements>
+      <bpmn:incoming>Flow_Gw_AllReady__Svc_Notify</bpmn:incoming>
+      <bpmn:incoming>Flow_Svc_Refund__Svc_Notify</bpmn:incoming>
+      <bpmn:outgoing>Flow_Svc_Notify__UT_ViewStatus</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="UT_ViewStatus" name="View delivery status">
+      <bpmn:documentation>User task (customer). Read-only Form_ViewStatus: statusMessage and confirmationReference.</bpmn:documentation>
+      <bpmn:extensionElements><zeebe:userTask /><zeebe:formDefinition formId="Form_ViewStatus" /></bpmn:extensionElements>
+      <bpmn:incoming>Flow_Svc_Notify__UT_ViewStatus</bpmn:incoming>
+      <bpmn:outgoing>Flow_UT_ViewStatus__End</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="End" name="Order closed">
+      <bpmn:documentation>End event.</bpmn:documentation>
+      <bpmn:incoming>Flow_UT_ViewStatus__End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_Start__UT_Choose" sourceRef="Start" targetRef="UT_Choose" />
+    <bpmn:sequenceFlow id="Flow_UT_Choose__Script_Arrange" sourceRef="UT_Choose" targetRef="Script_Arrange" />
+    <bpmn:sequenceFlow id="Flow_Script_Arrange__UT_Review" sourceRef="Script_Arrange" targetRef="UT_Review" />
+    <bpmn:sequenceFlow id="Flow_UT_Review__Gw_Confirm" sourceRef="UT_Review" targetRef="Gw_Confirm" />
+    <bpmn:sequenceFlow id="Flow_Gw_Confirm__Svc_Record" name="confirm" sourceRef="Gw_Confirm" targetRef="Svc_Record"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=arrangementDecision = "confirm"</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Gw_Confirm__UT_Choose" name="change" sourceRef="Gw_Confirm" targetRef="UT_Choose" />
+    <bpmn:sequenceFlow id="Flow_Svc_Record__UT_Fulfil" sourceRef="Svc_Record" targetRef="UT_Fulfil" />
+    <bpmn:sequenceFlow id="Flow_UT_Fulfil__Script_Shortfall" sourceRef="UT_Fulfil" targetRef="Script_Shortfall" />
+    <bpmn:sequenceFlow id="Flow_Script_Shortfall__Gw_AllReady" sourceRef="Script_Shortfall" targetRef="Gw_AllReady" />
+    <bpmn:sequenceFlow id="Flow_Gw_AllReady__Svc_Notify" name="yes" sourceRef="Gw_AllReady" targetRef="Svc_Notify"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=shortfall.allReady</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Gw_AllReady__Svc_Refund" name="no (UNABLE)" sourceRef="Gw_AllReady" targetRef="Svc_Refund" />
+    <bpmn:sequenceFlow id="Flow_Svc_Refund__Svc_Notify" sourceRef="Svc_Refund" targetRef="Svc_Notify" />
+    <bpmn:sequenceFlow id="Flow_Svc_Notify__UT_ViewStatus" sourceRef="Svc_Notify" targetRef="UT_ViewStatus" />
+    <bpmn:sequenceFlow id="Flow_UT_ViewStatus__End" sourceRef="UT_ViewStatus" targetRef="End" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_Delivery">
+      <bpmndi:BPMNShape id="Pool_Delivery_di" bpmnElement="Pool_Delivery" isHorizontal="true"><dc:Bounds x="160" y="20" width="1740" height="540" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Customer_di" bpmnElement="Lane_Customer" isHorizontal="true"><dc:Bounds x="190" y="20" width="1710" height="180" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_System_di" bpmnElement="Lane_System" isHorizontal="true"><dc:Bounds x="190" y="200" width="1710" height="180" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Producer_di" bpmnElement="Lane_Producer" isHorizontal="true"><dc:Bounds x="190" y="380" width="1710" height="180" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_di" bpmnElement="Start"><dc:Bounds x="262" y="92" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="235" y="132" width="90" height="27" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="UT_Choose_di" bpmnElement="UT_Choose"><dc:Bounds x="320" y="70" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Script_Arrange_di" bpmnElement="Script_Arrange"><dc:Bounds x="470" y="250" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="UT_Review_di" bpmnElement="UT_Review"><dc:Bounds x="630" y="70" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_Confirm_di" bpmnElement="Gw_Confirm" isMarkerVisible="true"><dc:Bounds x="795" y="85" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="850" y="65" width="70" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Svc_Record_di" bpmnElement="Svc_Record"><dc:Bounds x="910" y="250" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="UT_Fulfil_di" bpmnElement="UT_Fulfil"><dc:Bounds x="1050" y="430" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Script_Shortfall_di" bpmnElement="Script_Shortfall"><dc:Bounds x="1210" y="250" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_AllReady_di" bpmnElement="Gw_AllReady" isMarkerVisible="true"><dc:Bounds x="1345" y="265" width="50" height="50" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1400" y="245" width="70" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Svc_Refund_di" bpmnElement="Svc_Refund"><dc:Bounds x="1470" y="250" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Svc_Notify_di" bpmnElement="Svc_Notify"><dc:Bounds x="1630" y="250" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="UT_ViewStatus_di" bpmnElement="UT_ViewStatus"><dc:Bounds x="1630" y="70" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_di" bpmnElement="End"><dc:Bounds x="1802" y="92" width="36" height="36" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1775" y="132" width="90" height="27" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_Start__UT_Choose_di" bpmnElement="Flow_Start__UT_Choose">
+        <di:waypoint x="298" y="110" />
+        <di:waypoint x="320" y="110" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_UT_Choose__Script_Arrange_di" bpmnElement="Flow_UT_Choose__Script_Arrange">
+        <di:waypoint x="370" y="150" />
+        <di:waypoint x="370" y="290" />
+        <di:waypoint x="470" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Script_Arrange__UT_Review_di" bpmnElement="Flow_Script_Arrange__UT_Review">
+        <di:waypoint x="570" y="290" />
+        <di:waypoint x="680" y="290" />
+        <di:waypoint x="680" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_UT_Review__Gw_Confirm_di" bpmnElement="Flow_UT_Review__Gw_Confirm">
+        <di:waypoint x="730" y="110" />
+        <di:waypoint x="795" y="110" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Gw_Confirm__Svc_Record_di" bpmnElement="Flow_Gw_Confirm__Svc_Record">
+        <di:waypoint x="820" y="135" />
+        <di:waypoint x="820" y="290" />
+        <di:waypoint x="910" y="290" />
+        <bpmndi:BPMNLabel><dc:Bounds x="828" y="200" width="50" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Gw_Confirm__UT_Choose_di" bpmnElement="Flow_Gw_Confirm__UT_Choose">
+        <di:waypoint x="820" y="85" />
+        <di:waypoint x="820" y="45" />
+        <di:waypoint x="370" y="45" />
+        <di:waypoint x="370" y="70" />
+        <bpmndi:BPMNLabel><dc:Bounds x="580" y="28" width="50" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Svc_Record__UT_Fulfil_di" bpmnElement="Flow_Svc_Record__UT_Fulfil">
+        <di:waypoint x="1010" y="290" />
+        <di:waypoint x="1100" y="290" />
+        <di:waypoint x="1100" y="430" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_UT_Fulfil__Script_Shortfall_di" bpmnElement="Flow_UT_Fulfil__Script_Shortfall">
+        <di:waypoint x="1150" y="470" />
+        <di:waypoint x="1260" y="470" />
+        <di:waypoint x="1260" y="330" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Script_Shortfall__Gw_AllReady_di" bpmnElement="Flow_Script_Shortfall__Gw_AllReady">
+        <di:waypoint x="1310" y="290" />
+        <di:waypoint x="1345" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Gw_AllReady__Svc_Notify_di" bpmnElement="Flow_Gw_AllReady__Svc_Notify">
+        <di:waypoint x="1370" y="315" />
+        <di:waypoint x="1370" y="345" />
+        <di:waypoint x="1680" y="345" />
+        <di:waypoint x="1680" y="330" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1380" y="348" width="50" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Gw_AllReady__Svc_Refund_di" bpmnElement="Flow_Gw_AllReady__Svc_Refund">
+        <di:waypoint x="1395" y="290" />
+        <di:waypoint x="1470" y="290" />
+        <bpmndi:BPMNLabel><dc:Bounds x="1400" y="270" width="50" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Svc_Refund__Svc_Notify_di" bpmnElement="Flow_Svc_Refund__Svc_Notify">
+        <di:waypoint x="1570" y="290" />
+        <di:waypoint x="1630" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Svc_Notify__UT_ViewStatus_di" bpmnElement="Flow_Svc_Notify__UT_ViewStatus">
+        <di:waypoint x="1680" y="250" />
+        <di:waypoint x="1680" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_UT_ViewStatus__End_di" bpmnElement="Flow_UT_ViewStatus__End">
+        <di:waypoint x="1730" y="110" />
+        <di:waypoint x="1802" y="110" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
