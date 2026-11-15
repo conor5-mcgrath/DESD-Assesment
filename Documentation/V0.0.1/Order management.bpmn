@@ -1,0 +1,1296 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:ns1="modeler" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:ns0="xmlns" id="bpmn_copilot_Definition_id" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Web Modeler" exporterVersion="64767e4" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.9.0" ns0:modeler="http://camunda.org/schema/modeler/1.0" ns1:executionPlatform="Camunda Cloud" ns1:executionPlatformVersion="8.6">
+  <bpmn:error id="Error_PaymentFailed" name="PaymentFailedError" errorCode="PAYMENT_FAILED" />
+  <bpmn:message id="Message_0i1t7nc" name="ProductAddedToBasket" />
+  <bpmn:message id="Message_ReturnToSearching" name="ReturnToProductSearching">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=customerId" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_SubmitPayment" name="SubmitPayment">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=orderId" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_PaymentResponse" name="PaymentResponse">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=orderId" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_OutOfStockNotice" name="OutOfStockNotice">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=customerId" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_SystemErrorNotice" name="SystemErrorNotice">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=customerId" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_ProducerNotification" name="ProducerNotification">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=orderId" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_OrderFailedNotice" name="OrderFailedNotice">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=orderId" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_OrderStorageFailed" name="OrderStorageFailed">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=orderId" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:dataStore id="DataStore_Orders" name="orders (SQL database)" />
+  <bpmn:collaboration id="Collaboration_0byg98s" name="Order management">
+    <bpmn:participant id="Participant_0u9dj7b" name="Digital marketplace" processRef="Process_MarketplaceCheckout" />
+    <bpmn:participant id="Participant_0x7plfr" name="External Payment System" processRef="Process_0t5wapm" />
+    <bpmn:messageFlow id="Flow_0nd93ls" name="Card details + amount" sourceRef="Event_10lfm8s" targetRef="StartEvent_PaymentRequest" />
+    <bpmn:messageFlow id="Flow_009rdxy" name="Payment result" sourceRef="EndEvent_PaymentResponse" targetRef="Event_1fr5wwa" />
+  </bpmn:collaboration>
+  <bpmn:process id="Process_MarketplaceCheckout" name="E-commerce Checkout Process" processType="None" isClosed="false" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_1xrff5d">
+      <bpmn:lane id="Lane_1popzac" name="Customer">
+        <bpmn:flowNodeRef>adjust_quantity</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>review_basket</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_0l4t4de</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_1cndptk</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_1ydq2xh</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_1ydn6bo</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_1qhiytk</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_1h0ryb3</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_09f9ah9</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_10qfzg8</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_1n1v73m</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_14gtexw</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_10lfm8s</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_PaymentConfirm</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_1fr2r5e</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_Timeout</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_0r56zmn" name="Marketplace System">
+        <bpmn:flowNodeRef>Activity_1k46fw7</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_02yudnd</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_1ge213a</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_0amz50a</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_0shssnf</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_0hw9sig</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RetrieveBasket</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_BasketOK</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CheckStock</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_StockCheckOK</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_StockDecision</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_OutOfStock</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_SystemError</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_1nedxa6</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_1c6dr86</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_1b9p2ih</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_1bsawo1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ReservedOK</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_0mj5ry1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_1fr5wwa</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_0xoezft</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_1ib9c7t</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Activity_1qvr40h</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_1ovmynn</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_StoreOrder</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_StoreOK</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_StoreFailed</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_0z3vkaw</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SendConfirmation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_1v76hqf</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_OrderComplete</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:userTask id="adjust_quantity" name="Adjust quantity">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:formDefinition formId="adjust-quantity-form" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=itemName" target="ItemName" />
+          <zeebe:input source="=itemStock" target="ItemStock" />
+          <zeebe:input source="=quantity" target="SelectedQuantity" />
+          <zeebe:input source="=itemID" target="ItemID" />
+          <zeebe:output source="=quantity" target="SelectedQuantity" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0e0dgdc</bpmn:incoming>
+      <bpmn:outgoing>Flow_1ddfn2i</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Activity_1k46fw7" name="Check stock and season availability">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="check-stock-availability" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=itemID" target="ItemID" />
+          <zeebe:output source="=itemStock" target="ItemStock" />
+          <zeebe:output source="=inSeason" target="InSeason" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0q09n7b</bpmn:incoming>
+      <bpmn:outgoing>Flow_04yoy8r</bpmn:outgoing>
+      <bpmn:property id="Property_06z34go" name="__targetRef_placeholder" />
+      <bpmn:dataInputAssociation id="DataInputAssociation_09cyqmd">
+        <bpmn:sourceRef>DataStoreReference_0g3ple0</bpmn:sourceRef>
+        <bpmn:targetRef>Property_06z34go</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_02yudnd" name="Is product available?">
+      <bpmn:incoming>Flow_04yoy8r</bpmn:incoming>
+      <bpmn:outgoing>Flow_0e0dgdc</bpmn:outgoing>
+      <bpmn:outgoing>Flow_152qwwc</bpmn:outgoing>
+      <bpmn:outgoing>Flow_1kunpwe</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Activity_1ge213a" name="Group basket by producer">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="remove-and-notify" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=basket" target="Basket" />
+          <zeebe:input source="=itemID" target="ItemID" />
+          <zeebe:input source="=itemProducer" target="Producer" />
+          <zeebe:output source="=basket" target="Basket" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_152qwwc</bpmn:incoming>
+      <bpmn:outgoing>Flow_153yhnn</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Activity_0amz50a" name="Remove product and notify customer">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="remove-and-notify" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=basket" target="Basket" />
+          <zeebe:input source="=itemID" target="ItemID" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1kunpwe</bpmn:incoming>
+      <bpmn:outgoing>Flow_1o3baug</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="Event_0shssnf" name="Product removed">
+      <bpmn:incoming>Flow_1o3baug</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="Activity_0hw9sig" name="Calculate subtotal per producer">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="calculate-subtotal-per-producer" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=basket" target="Basket" />
+          <zeebe:input source="=itemID" target="ItemID" />
+          <zeebe:input source="=itemPrice" target="ItemPrice" />
+          <zeebe:input source="=itemProducer" target="Producer" />
+          <zeebe:output source="=basket" target="Basket" />
+          <zeebe:output source="=producerSubtotal" target="Subtotal" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_153yhnn</bpmn:incoming>
+      <bpmn:outgoing>Flow_1b3zcfv</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="review_basket" name="Review basket">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:ioMapping>
+          <zeebe:input source="=basket" target="Basket" />
+          <zeebe:output source="=startCheckout" target="StartCheckout" />
+          <zeebe:output source="=Return" target="Return" />
+          <zeebe:output source="=basketExpired" target="BasketExpired" />
+        </zeebe:ioMapping>
+        <zeebe:formDefinition formId="review-basket-form" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1b3zcfv</bpmn:incoming>
+      <bpmn:outgoing>Flow_0l2poek</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="Event_0l4t4de" name="Basket expired">
+      <bpmn:incoming>Flow_0p4p1ow</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:exclusiveGateway id="Gateway_1cndptk" name="What does the customer want to do?">
+      <bpmn:incoming>Flow_0l2poek</bpmn:incoming>
+      <bpmn:outgoing>Flow_00hnnu0</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0qotl72</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:intermediateThrowEvent id="Event_1ydq2xh" name="Return to product searching">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="ReturnToProductSearching" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_00hnnu0</bpmn:incoming>
+      <bpmn:outgoing>Flow_122hjsf</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_1udx14x" messageRef="Message_ReturnToSearching" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:endEvent id="Event_1ydn6bo" name="Returned to searching">
+      <bpmn:incoming>Flow_122hjsf</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:intermediateThrowEvent id="Event_1qhiytk" name="Start checkout">
+      <bpmn:documentation>Customer proceeds to checkout. The flow continues directly into Retrieve Basket from Database (customer and system are in the same pool, so no message is sent between them).</bpmn:documentation>
+      <bpmn:incoming>Flow_0qotl72</bpmn:incoming>
+      <bpmn:outgoing>Flow_0ajodlc</bpmn:outgoing>
+    </bpmn:intermediateThrowEvent>
+    <bpmn:startEvent id="Event_1h0ryb3" name="Product added to basket">
+      <bpmn:documentation>Process start. The rest of the process also needs the start variables customerId (string), customerEmail (string) and currency (default GBP), previously supplied by the Place order clicked start event. The basket itself is retrieved from the orders database by Retrieve Basket.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:properties>
+          <zeebe:property name="camundaModeler:exampleOutputJson" value="{&#10;  &#34;ItemStock&#34;: 10,&#10;  &#34;SelectedQuantity&#34;: 3,&#10;  &#34;InSeason&#34;: true&#10;}" />
+        </zeebe:properties>
+      </bpmn:extensionElements>
+      <bpmn:outgoing>Flow_1dudrbv</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_16lmhxf" messageRef="Message_0i1t7nc" />
+    </bpmn:startEvent>
+    <bpmn:boundaryEvent id="Event_09f9ah9" name="Basket timeout (30 minutes)" attachedToRef="review_basket">
+      <bpmn:outgoing>Flow_0p4p1ow</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerEventDefinition_1qlucsb">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT30M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="Flow_0e0dgdc" name="No, insufficient stock" sourceRef="Gateway_02yudnd" targetRef="adjust_quantity">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=ItemStock &lt; SelectedQuantity and InSeason</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_0q09n7b" sourceRef="Gateway_10qfzg8" targetRef="Activity_1k46fw7" />
+    <bpmn:sequenceFlow id="Flow_04yoy8r" sourceRef="Activity_1k46fw7" targetRef="Gateway_02yudnd" />
+    <bpmn:sequenceFlow id="Flow_152qwwc" name="Yes" sourceRef="Gateway_02yudnd" targetRef="Activity_1ge213a">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=ItemStock &gt;= SelectedQuantity and InSeason</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_1kunpwe" name="No, not in season" sourceRef="Gateway_02yudnd" targetRef="Activity_0amz50a">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=not(InSeason)</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_153yhnn" sourceRef="Activity_1ge213a" targetRef="Activity_0hw9sig" />
+    <bpmn:sequenceFlow id="Flow_1o3baug" sourceRef="Activity_0amz50a" targetRef="Event_0shssnf" />
+    <bpmn:sequenceFlow id="Flow_1b3zcfv" sourceRef="Activity_0hw9sig" targetRef="review_basket" />
+    <bpmn:sequenceFlow id="Flow_0l2poek" sourceRef="review_basket" targetRef="Gateway_1cndptk" />
+    <bpmn:sequenceFlow id="Flow_0p4p1ow" sourceRef="Event_09f9ah9" targetRef="Event_0l4t4de" />
+    <bpmn:sequenceFlow id="Flow_00hnnu0" name="Continue shopping" sourceRef="Gateway_1cndptk" targetRef="Event_1ydq2xh">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=customerChoice = "continue"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_0qotl72" name="Checkout" sourceRef="Gateway_1cndptk" targetRef="Event_1qhiytk">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=customerChoice = "checkout"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_122hjsf" sourceRef="Event_1ydq2xh" targetRef="Event_1ydn6bo" />
+    <bpmn:sequenceFlow id="Flow_1dudrbv" sourceRef="Event_1h0ryb3" targetRef="Gateway_10qfzg8" />
+    <bpmn:sequenceFlow id="Flow_1ddfn2i" sourceRef="adjust_quantity" targetRef="Gateway_10qfzg8" />
+    <bpmn:exclusiveGateway id="Gateway_10qfzg8">
+      <bpmn:incoming>Flow_1dudrbv</bpmn:incoming>
+      <bpmn:incoming>Flow_1ddfn2i</bpmn:incoming>
+      <bpmn:outgoing>Flow_0q09n7b</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:dataStoreReference id="DataStoreReference_0g3ple0" name="orders (SQL database)" dataStoreRef="DataStore_Orders" />
+    <bpmn:serviceTask id="Task_RetrieveBasket" name="Retrieve Basket from Database">
+      <bpmn:documentation>Reads the customer's active basket from the orders database (tables baskets, basket_items, inventory). Worker returns basket (list of {productId, productName, producerId, quantity, unitPrice}), basketStatus (SUCCESS | EMPTY | ERROR) and errorMessage. The worker must catch database exceptions and return basketStatus=ERROR instead of failing the job; a missing status is treated as ERROR.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="retrieve-basket" retries="3" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=&#34;orders&#34;" target="database" />
+          <zeebe:input source="=&#34;SELECT bi.product_id AS productId, i.product_name AS productName, i.producer_id AS producerId, bi.quantity AS quantity, i.unit_price AS unitPrice FROM basket_items bi JOIN baskets b ON b.basket_id = bi.basket_id JOIN inventory i ON i.product_id = bi.product_id WHERE b.customer_id = :customerId AND b.status = &#39;ACTIVE&#39;&#34;" target="query" />
+          <zeebe:input source="={customerId: customerId}" target="parameters" />
+          <zeebe:output source="=if is defined(basket) then basket else null" target="basket" />
+          <zeebe:output source="=if is defined(basketStatus) then basketStatus else &#34;ERROR&#34;" target="basketStatus" />
+          <zeebe:output source="=if is defined(errorMessage) then errorMessage else null" target="errorMessage" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0ajodlc</bpmn:incoming>
+      <bpmn:outgoing>Flow_BasketToGateway</bpmn:outgoing>
+      <bpmn:property id="Property_1sou7za" name="__targetRef_placeholder" />
+      <bpmn:dataInputAssociation id="DataInputAssociation_Orders">
+        <bpmn:sourceRef>DataStoreReference_OrdersRead</bpmn:sourceRef>
+        <bpmn:targetRef>Property_1sou7za</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_BasketOK" name="Basket retrieved?" default="Flow_BasketNo">
+      <bpmn:incoming>Flow_BasketToGateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_BasketYes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_BasketNo</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_CheckStock" name="Check Product Availability of Basket" implementation="##WebService">
+      <bpmn:documentation>Checks each basket line against inventory (requested quantity vs. quantity on hand). Returns stockStatus (SUCCESS | ERROR) = did the check itself run, allInStock (true only if every line is available) and stockResults per line. Two different decisions follow: "Stock check OK?" (technical) and "Products in Stock?" (business).</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="check-stock" retries="3" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=basket" target="basket" />
+          <zeebe:output source="=if is defined(stockStatus) then stockStatus else &#34;ERROR&#34;" target="stockStatus" />
+          <zeebe:output source="=if is defined(allInStock) then allInStock else false" target="allInStock" />
+          <zeebe:output source="=if is defined(stockResults) then stockResults else null" target="stockResults" />
+          <zeebe:output source="=if is defined(errorMessage) then errorMessage else null" target="errorMessage" />
+        </zeebe:ioMapping>
+        <zeebe:properties>
+          <zeebe:property name="camundaModeler:exampleOutputJson" value="{&#10;  &#34;type&#34;: &#34;object&#34;,&#10;  &#34;properties&#34;: {&#10;    &#34;stockStatus&#34;: {&#10;      &#34;type&#34;: &#34;string&#34;&#10;    },&#10;    &#34;allInStock&#34;: {&#10;      &#34;type&#34;: &#34;boolean&#34;&#10;    },&#10;    &#34;stockResults&#34;: {&#10;      &#34;type&#34;: &#34;array&#34;,&#10;      &#34;items&#34;: {&#10;        &#34;type&#34;: &#34;object&#34;,&#10;        &#34;properties&#34;: {&#10;          &#34;productId&#34;: {&#10;            &#34;type&#34;: &#34;string&#34;&#10;          },&#10;          &#34;requestedQty&#34;: {&#10;            &#34;type&#34;: &#34;number&#34;&#10;          },&#10;          &#34;availableQty&#34;: {&#10;            &#34;type&#34;: &#34;number&#34;&#10;          },&#10;          &#34;available&#34;: {&#10;            &#34;type&#34;: &#34;boolean&#34;&#10;          }&#10;        }&#10;      }&#10;    }&#10;  }&#10;}" />
+        </zeebe:properties>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_BasketYes</bpmn:incoming>
+      <bpmn:outgoing>Flow_07ah2xl</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_StockCheckOK" name="Stock check OK?" default="Flow_StockCheckNo">
+      <bpmn:incoming>Flow_07ah2xl</bpmn:incoming>
+      <bpmn:outgoing>Flow_StockCheckYes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_StockCheckNo</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="Gateway_StockDecision" name="Products in Stock?" default="Flow_0014g6w">
+      <bpmn:incoming>Flow_StockCheckYes</bpmn:incoming>
+      <bpmn:outgoing>Flow_0yntuct</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0014g6w</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="EndEvent_OutOfStock" name="Out of Stock">
+      <bpmn:documentation>Customer is told which items are unavailable / short and asked to amend the basket. Order is not created.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="notify-customer-out-of-stock" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=customerId" target="customerId" />
+          <zeebe:input source="=customerEmail" target="customerEmail" />
+          <zeebe:input source="=stockResults[available = false]" target="unavailableItems" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0014g6w</bpmn:incoming>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_OutOfStock" messageRef="Message_OutOfStockNotice" />
+    </bpmn:endEvent>
+    <bpmn:endEvent id="EndEvent_SystemError" name="System error">
+      <bpmn:documentation>Reached when a task reports a status other than SUCCESS before payment (basket could not be read, stock check failed, or stock could not be reserved). Customer is told something went wrong and asked to try again; errorMessage carries the technical reason for support/logging.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="notify-customer-system-error" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=customerId" target="customerId" />
+          <zeebe:input source="=customerEmail" target="customerEmail" />
+          <zeebe:input source="=if is defined(errorMessage) then errorMessage else null" target="errorMessage" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_BasketNo</bpmn:incoming>
+      <bpmn:incoming>Flow_StockCheckNo</bpmn:incoming>
+      <bpmn:incoming>Flow_ReservedNo</bpmn:incoming>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_SystemError" messageRef="Message_SystemErrorNotice" />
+    </bpmn:endEvent>
+    <bpmn:parallelGateway id="Gateway_1nedxa6">
+      <bpmn:incoming>Flow_0yntuct</bpmn:incoming>
+      <bpmn:outgoing>Flow_0yy4sli</bpmn:outgoing>
+      <bpmn:outgoing>Flow_02qncwl</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:scriptTask id="Activity_1c6dr86" name="Calculate Order Value">
+      <bpmn:documentation>Works out the basket subtotal and the amount attributable to each producer (multi-vendor split). Output orderSummary = {subtotal, producers:[{producerId, amount}]}. A script task has no worker: bad basket data raises an incident, which is why the basket is validated by the status gateways before this point.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:script expression="={&#10;  subtotal: round half up(sum(for i in basket return i.unitPrice * i.quantity), 2),&#10;  producers: for pid in distinct values(for i in basket return i.producerId) return {&#10;    producerId: pid,&#10;    amount: round half up(sum(for i in basket[producerId = pid] return i.unitPrice * i.quantity), 2)&#10;  }&#10;}" resultVariable="orderSummary" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=basket" target="basket" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0yy4sli</bpmn:incoming>
+      <bpmn:outgoing>Flow_07n2kqq</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:serviceTask id="Activity_1b9p2ih" name="Reserve Products in Basket">
+      <bpmn:documentation>Places a temporary hold on the stock for every basket line (stock_reservations) and creates the provisional marketplace order (orders row) and its producer-specific elements. Returns reservationId, orderId, reserveStatus (SUCCESS | ERROR) and errorMessage. On failure the worker must roll back any partial hold before returning ERROR.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="reserve-stock" retries="3" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=basket" target="basket" />
+          <zeebe:input source="=customerId" target="customerId" />
+          <zeebe:output source="=if is defined(reservationId) then reservationId else null" target="reservationId" />
+          <zeebe:output source="=if is defined(orderId) then orderId else null" target="orderId" />
+          <zeebe:output source="=if is defined(reserveStatus) then reserveStatus else &#34;ERROR&#34;" target="reserveStatus" />
+          <zeebe:output source="=if is defined(errorMessage) then errorMessage else null" target="errorMessage" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_02qncwl</bpmn:incoming>
+      <bpmn:outgoing>Flow_0x9kmlc</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:parallelGateway id="Gateway_1bsawo1">
+      <bpmn:incoming>Flow_07n2kqq</bpmn:incoming>
+      <bpmn:incoming>Flow_0x9kmlc</bpmn:incoming>
+      <bpmn:outgoing>Flow_JoinToReserved</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:exclusiveGateway id="Gateway_ReservedOK" name="Stock reserved?" default="Flow_ReservedNo">
+      <bpmn:incoming>Flow_JoinToReserved</bpmn:incoming>
+      <bpmn:outgoing>Flow_ReservedYes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_ReservedNo</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:scriptTask id="Activity_0mj5ry1" name="Add Marketplace Commission">
+      <bpmn:documentation>Applies the 5% marketplace commission to each producer amount (deducted from the producer payout; the customer still pays the basket subtotal). Output commissionSummary = {commissionRate, producerPayouts[], totalCommission, orderTotal}.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:script expression="={&#10;  commissionRate: 0.05,&#10;  producerPayouts: for p in orderSummary.producers return {&#10;    producerId: p.producerId,&#10;    grossAmount: p.amount,&#10;    commission: round half up(p.amount * 0.05, 2),&#10;    payoutAmount: round half up(p.amount - round half up(p.amount * 0.05, 2), 2)&#10;  },&#10;  totalCommission: sum(for x in producerPayouts return x.commission),&#10;  orderTotal: orderSummary.subtotal&#10;}" resultVariable="commissionSummary" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderSummary" target="orderSummary" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_ReservedYes</bpmn:incoming>
+      <bpmn:outgoing>Flow_0365h83</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:userTask id="Activity_1n1v73m" name="Confirm details">
+      <bpmn:documentation>Form confirm-details-form. Customer reviews items, per-producer split and total, chooses delivery/collection, enters card details, then confirms or cancels. Form fields: fulfilmentChoice, deliveryAddress, decision (confirm | cancel), cardholderName, cardNumber, cardExpiry, cardCvv. Output mapping keeps only: decision, fulfilmentChoice, deliveryAddress, paymentCard (card details, held ONLY until Initiate payment sends them to the payment provider and then cleared) and cardLast4 (safe to keep for the receipt). The raw card fields stay local to this task and are discarded when it completes. Shown again on a payment retry (declined / service unavailable, max 3 attempts). Times out after 10 minutes.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:formDefinition formId="confirm-details-form" />
+        <zeebe:assignmentDefinition assignee="=customerId" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=currency" target="currency" />
+          <zeebe:input source="=basket" target="basket" />
+          <zeebe:input source="=orderSummary" target="orderSummary" />
+          <zeebe:input source="=commissionSummary" target="commissionSummary" />
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=if is defined(paymentStatus) then paymentStatus else null" target="retryReason" />
+          <zeebe:input source="=if is defined(declineReason) then declineReason else null" target="declineReason" />
+          <zeebe:input source="=if is defined(paymentAttempts) then paymentAttempts else 0" target="paymentAttempts" />
+          <zeebe:output source="=decision" target="decision" />
+          <zeebe:output source="=fulfilmentChoice" target="fulfilmentChoice" />
+          <zeebe:output source="=if is defined(deliveryAddress) then deliveryAddress else null" target="deliveryAddress" />
+          <zeebe:output source="=if is defined(cardNumber) then {cardholderName: cardholderName, cardNumber: cardNumber, expiryDate: cardExpiry, cvv: cardCvv} else null" target="paymentCard" />
+          <zeebe:output source="=if is defined(cardNumber) then substring(cardNumber, string length(cardNumber) - 3) else null" target="cardLast4" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0365h83</bpmn:incoming>
+      <bpmn:incoming>Flow_PaymentRetry</bpmn:incoming>
+      <bpmn:outgoing>Flow_1vs0fei</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_14gtexw" name="Cancelled?" default="Flow_0i0it6y">
+      <bpmn:incoming>Flow_1vs0fei</bpmn:incoming>
+      <bpmn:outgoing>Flow_0i0it6y</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0e1jkbz</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:intermediateThrowEvent id="Event_10lfm8s" name="Initiate payment">
+      <bpmn:documentation>Sends the payment request to the external payment system (sandbox / simulated). Message contents: orderId, amount, currency, sandbox=true, splits (per-producer amounts and commission) and card = {cardholderName, cardNumber, expiryDate, cvv}. The card details go only to the payment provider: the output mapping clears paymentCard straight after sending, they are never passed to Store Order Details or the database, and only cardLast4 is kept. paymentAttempts is incremented for the retry limit.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="submit-payment" retries="3" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=commissionSummary.orderTotal" target="amount" />
+          <zeebe:input source="=currency" target="currency" />
+          <zeebe:input source="=paymentCard" target="card" />
+          <zeebe:input source="=true" target="sandbox" />
+          <zeebe:input source="=commissionSummary.producerPayouts" target="splits" />
+          <zeebe:output source="=null" target="paymentCard" />
+          <zeebe:output source="=if is defined(paymentAttempts) then paymentAttempts + 1 else 1" target="paymentAttempts" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0i0it6y</bpmn:incoming>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_03qrmae" messageRef="Message_SubmitPayment" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:intermediateCatchEvent id="Event_1fr5wwa" name="Receive response">
+      <bpmn:documentation>Waits for the payment provider result, correlated on orderId. Message variables: orderId, paymentStatus (APPROVED | DECLINED | SERVICE_UNAVAILABLE), transactionId, declineReason. Output mapping: a missing paymentStatus becomes ERROR so the gateway always has a value to decide on.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:ioMapping>
+          <zeebe:output source="=if is defined(paymentStatus) then paymentStatus else &#34;ERROR&#34;" target="paymentStatus" />
+          <zeebe:output source="=if is defined(transactionId) then transactionId else null" target="transactionId" />
+          <zeebe:output source="=if is defined(declineReason) then declineReason else null" target="declineReason" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:outgoing>Flow_1kpu03i</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_0bslahy" messageRef="Message_PaymentResponse" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="Gateway_0xoezft" name="Payment result?" default="Flow_0lskahm">
+      <bpmn:incoming>Flow_1kpu03i</bpmn:incoming>
+      <bpmn:outgoing>Flow_0voo50l</bpmn:outgoing>
+      <bpmn:outgoing>Flow_PaymentRetry</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0lskahm</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="Gateway_1ib9c7t">
+      <bpmn:incoming>Flow_0htsbdk</bpmn:incoming>
+      <bpmn:incoming>Flow_0lskahm</bpmn:incoming>
+      <bpmn:incoming>Flow_0e1jkbz</bpmn:incoming>
+      <bpmn:outgoing>Flow_1bz78kr</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Activity_1qvr40h" name="Release Reserved Stock">
+      <bpmn:documentation>Releases the stock hold and cancels the provisional order. Used for customer cancel, 10 minute timeout, and a payment that failed for good (declined / unavailable after 3 attempts, or an unknown result). Returns releaseStatus (SUCCESS | ERROR) and releaseError. A failed release does not change the customer outcome (they are told the order failed either way); it must be logged for follow-up.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="release-stock" retries="3" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=reservationId" target="reservationId" />
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:output source="=if is defined(releaseStatus) then releaseStatus else &#34;ERROR&#34;" target="releaseStatus" />
+          <zeebe:output source="=if is defined(releaseError) then releaseError else null" target="releaseError" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1bz78kr</bpmn:incoming>
+      <bpmn:outgoing>Flow_0r1ci4d</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="Event_1ovmynn" name="Display error message">
+      <bpmn:documentation>Tells the customer why the order failed (cancelled, timed out, payment declined, payment service unavailable) so they can start again.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="notify-customer-order-failed" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=customerId" target="customerId" />
+          <zeebe:input source="=customerEmail" target="customerEmail" />
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=if is defined(decision) and decision = &#34;cancel&#34; then &#34;CANCELLED&#34; else if is defined(paymentStatus) then paymentStatus else &#34;TIMEOUT&#34;" target="failureReason" />
+          <zeebe:input source="=if is defined(declineReason) then declineReason else null" target="declineReason" />
+          <zeebe:input source="=if is defined(releaseStatus) then releaseStatus else null" target="releaseStatus" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0r1ci4d</bpmn:incoming>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_OrderFailed" messageRef="Message_OrderFailedNotice" />
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="Task_StoreOrder" name="Store Order Details">
+      <bpmn:documentation>Writes the confirmed order to the orders database. UPDATE orders SET status='CONFIRMED', transaction_id=:transactionId, fulfilment_choice=:fulfilmentChoice, delivery_address=:deliveryAddress, card_last4=:cardLast4, order_total=:orderTotal, commission_total=:totalCommission WHERE order_id=:orderId; INSERT INTO producer_orders (order_id, producer_id, gross_amount, commission, payout_amount) one row per producerPayouts entry; INSERT INTO order_items one row per basket line; UPDATE inventory SET quantity_on_hand = quantity_on_hand - :quantity per basket line; UPDATE stock_reservations SET status='CONSUMED' WHERE reservation_id=:reservationId; UPDATE baskets SET status='CHECKED_OUT' WHERE customer_id=:customerId AND status='ACTIVE'. Run as ONE transaction. Card details are deliberately NOT an input of this task. Returns storeStatus (SUCCESS | ERROR) and errorMessage.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="store-order" retries="3" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=&#34;orders&#34;" target="database" />
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=customerId" target="customerId" />
+          <zeebe:input source="=reservationId" target="reservationId" />
+          <zeebe:input source="=transactionId" target="transactionId" />
+          <zeebe:input source="=basket" target="basket" />
+          <zeebe:input source="=commissionSummary" target="commissionSummary" />
+          <zeebe:input source="=fulfilmentChoice" target="fulfilmentChoice" />
+          <zeebe:input source="=deliveryAddress" target="deliveryAddress" />
+          <zeebe:input source="=if is defined(cardLast4) then cardLast4 else null" target="cardLast4" />
+          <zeebe:output source="=if is defined(storeStatus) then storeStatus else &#34;ERROR&#34;" target="storeStatus" />
+          <zeebe:output source="=if is defined(errorMessage) then errorMessage else null" target="errorMessage" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0voo50l</bpmn:incoming>
+      <bpmn:outgoing>Flow_14mp53l</bpmn:outgoing>
+      <bpmn:dataOutputAssociation id="DataOutputAssociation_Orders">
+        <bpmn:targetRef>DataStoreReference_Orders</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_StoreOK" name="Order stored?" default="Flow_StoreNo">
+      <bpmn:incoming>Flow_14mp53l</bpmn:incoming>
+      <bpmn:outgoing>Flow_StoreYes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_StoreNo</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="EndEvent_StoreFailed" name="Order storage failed - manual review">
+      <bpmn:documentation>Payment was APPROVED but the order could not be written to the database. The customer has paid, so stock is NOT released and the order is not cancelled: support is alerted with orderId, transactionId and errorMessage to complete or refund it manually.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="escalate-order-failure" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=transactionId" target="transactionId" />
+          <zeebe:input source="=customerId" target="customerId" />
+          <zeebe:input source="=if is defined(errorMessage) then errorMessage else null" target="errorMessage" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_StoreNo</bpmn:incoming>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_StoreFailed" messageRef="Message_OrderStorageFailed" />
+    </bpmn:endEvent>
+    <bpmn:parallelGateway id="Gateway_0z3vkaw">
+      <bpmn:incoming>Flow_StoreYes</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToPayConfirm</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0zjykix</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:userTask id="Activity_PaymentConfirm" name="Payment confirmation">
+      <bpmn:documentation>Form payment-confirmation-form. Tells the customer the payment has been confirmed: status, transaction reference, amount and card ending digits. The customer ticks paymentAcknowledged to continue (form output).</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:formDefinition formId="payment-confirmation-form" />
+        <zeebe:assignmentDefinition assignee="=customerId" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=paymentStatus" target="paymentStatus" />
+          <zeebe:input source="=transactionId" target="transactionId" />
+          <zeebe:input source="=currency" target="currency" />
+          <zeebe:input source="=commissionSummary.orderTotal" target="orderTotal" />
+          <zeebe:input source="=if is defined(cardLast4) then cardLast4 else null" target="cardLast4" />
+          <zeebe:output source="=if is defined(paymentAcknowledged) then paymentAcknowledged else false" target="paymentAcknowledged" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_ToPayConfirm</bpmn:incoming>
+      <bpmn:outgoing>Flow_PayConfirmToView</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Activity_1fr2r5e" name="View payment and order details">
+      <bpmn:documentation>Form order-summary-form. Customer sees the order confirmation page: orderId, transactionId, items, total and fulfilment details.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:formDefinition formId="order-summary-form" />
+        <zeebe:assignmentDefinition assignee="=customerId" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=currency" target="currency" />
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=transactionId" target="transactionId" />
+          <zeebe:input source="=basket" target="basket" />
+          <zeebe:input source="=commissionSummary.orderTotal" target="orderTotal" />
+          <zeebe:input source="=fulfilmentChoice" target="fulfilmentChoice" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_PayConfirmToView</bpmn:incoming>
+      <bpmn:outgoing>Flow_0u4zyvh</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Task_SendConfirmation" name="Send Order Confirmation">
+      <bpmn:documentation>Emails the customer the order confirmation: orderId, items, order total, transactionId and fulfilment choice. Returns emailStatus (SUCCESS | ERROR) and emailError. An email failure does not undo a paid, stored order, so there is no gateway after this task: the status is kept for support to re-send, and the process continues.</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="send-order-confirmation" retries="3" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=customerEmail" target="customerEmail" />
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=basket" target="basket" />
+          <zeebe:input source="=commissionSummary.orderTotal" target="orderTotal" />
+          <zeebe:input source="=transactionId" target="transactionId" />
+          <zeebe:input source="=fulfilmentChoice" target="fulfilmentChoice" />
+          <zeebe:output source="=if is defined(emailStatus) then emailStatus else &#34;ERROR&#34;" target="emailStatus" />
+          <zeebe:output source="=if is defined(emailError) then emailError else null" target="emailError" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0zjykix</bpmn:incoming>
+      <bpmn:outgoing>Flow_0nf0bix</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:parallelGateway id="Gateway_1v76hqf">
+      <bpmn:incoming>Flow_0nf0bix</bpmn:incoming>
+      <bpmn:incoming>Flow_0u4zyvh</bpmn:incoming>
+      <bpmn:outgoing>Flow_03p2wek</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:endEvent id="EndEvent_OrderComplete" name="Order Complete">
+      <bpmn:documentation>Notifies each producer of its own order element (items, fulfilmentChoice, gross amount, commission, payout).</bpmn:documentation>
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="notify-producers" retries="3" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=orderId" target="orderId" />
+          <zeebe:input source="=basket" target="basket" />
+          <zeebe:input source="=commissionSummary.producerPayouts" target="producerPayouts" />
+          <zeebe:input source="=fulfilmentChoice" target="fulfilmentChoice" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_03p2wek</bpmn:incoming>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_179twdy" messageRef="Message_ProducerNotification" />
+    </bpmn:endEvent>
+    <bpmn:dataStoreReference id="DataStoreReference_OrdersRead" name="orders (SQL database)" dataStoreRef="DataStore_Orders" />
+    <bpmn:dataStoreReference id="DataStoreReference_Orders" name="orders (SQL database)" dataStoreRef="DataStore_Orders" />
+    <bpmn:boundaryEvent id="Event_Timeout" name="10 mins" attachedToRef="Activity_1n1v73m">
+      <bpmn:outgoing>Flow_0htsbdk</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerEventDefinition_0ti65aj">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT10M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="Flow_0ajodlc" sourceRef="Event_1qhiytk" targetRef="Task_RetrieveBasket" />
+    <bpmn:sequenceFlow id="Flow_BasketToGateway" sourceRef="Task_RetrieveBasket" targetRef="Gateway_BasketOK" />
+    <bpmn:sequenceFlow id="Flow_BasketYes" name="Yes" sourceRef="Gateway_BasketOK" targetRef="Task_CheckStock">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=basketStatus = "SUCCESS"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_BasketNo" name="No" sourceRef="Gateway_BasketOK" targetRef="EndEvent_SystemError" />
+    <bpmn:sequenceFlow id="Flow_07ah2xl" sourceRef="Task_CheckStock" targetRef="Gateway_StockCheckOK" />
+    <bpmn:sequenceFlow id="Flow_StockCheckYes" name="Yes" sourceRef="Gateway_StockCheckOK" targetRef="Gateway_StockDecision">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=stockStatus = "SUCCESS"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_StockCheckNo" name="No" sourceRef="Gateway_StockCheckOK" targetRef="EndEvent_SystemError" />
+    <bpmn:sequenceFlow id="Flow_0yntuct" name="Yes" sourceRef="Gateway_StockDecision" targetRef="Gateway_1nedxa6">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=allInStock = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_0014g6w" name="No" sourceRef="Gateway_StockDecision" targetRef="EndEvent_OutOfStock" />
+    <bpmn:sequenceFlow id="Flow_ReservedNo" name="No" sourceRef="Gateway_ReservedOK" targetRef="EndEvent_SystemError" />
+    <bpmn:sequenceFlow id="Flow_0yy4sli" sourceRef="Gateway_1nedxa6" targetRef="Activity_1c6dr86" />
+    <bpmn:sequenceFlow id="Flow_02qncwl" sourceRef="Gateway_1nedxa6" targetRef="Activity_1b9p2ih" />
+    <bpmn:sequenceFlow id="Flow_07n2kqq" sourceRef="Activity_1c6dr86" targetRef="Gateway_1bsawo1" />
+    <bpmn:sequenceFlow id="Flow_0x9kmlc" sourceRef="Activity_1b9p2ih" targetRef="Gateway_1bsawo1" />
+    <bpmn:sequenceFlow id="Flow_JoinToReserved" sourceRef="Gateway_1bsawo1" targetRef="Gateway_ReservedOK" />
+    <bpmn:sequenceFlow id="Flow_ReservedYes" name="Yes" sourceRef="Gateway_ReservedOK" targetRef="Activity_0mj5ry1">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=reserveStatus = "SUCCESS"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_0365h83" sourceRef="Activity_0mj5ry1" targetRef="Activity_1n1v73m" />
+    <bpmn:sequenceFlow id="Flow_PaymentRetry" name="Retry" sourceRef="Gateway_0xoezft" targetRef="Activity_1n1v73m">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=(paymentStatus = "DECLINED" or paymentStatus = "SERVICE_UNAVAILABLE") and paymentAttempts &lt; 3</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_1vs0fei" sourceRef="Activity_1n1v73m" targetRef="Gateway_14gtexw" />
+    <bpmn:sequenceFlow id="Flow_0i0it6y" name="No" sourceRef="Gateway_14gtexw" targetRef="Event_10lfm8s" />
+    <bpmn:sequenceFlow id="Flow_0e1jkbz" name="Yes" sourceRef="Gateway_14gtexw" targetRef="Gateway_1ib9c7t">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=decision = "cancel"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_1kpu03i" sourceRef="Event_1fr5wwa" targetRef="Gateway_0xoezft" />
+    <bpmn:sequenceFlow id="Flow_0voo50l" name="Approved" sourceRef="Gateway_0xoezft" targetRef="Task_StoreOrder">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=paymentStatus = "APPROVED"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_0lskahm" name="Failed" sourceRef="Gateway_0xoezft" targetRef="Gateway_1ib9c7t" />
+    <bpmn:sequenceFlow id="Flow_0htsbdk" sourceRef="Event_Timeout" targetRef="Gateway_1ib9c7t" />
+    <bpmn:sequenceFlow id="Flow_1bz78kr" sourceRef="Gateway_1ib9c7t" targetRef="Activity_1qvr40h" />
+    <bpmn:sequenceFlow id="Flow_0r1ci4d" sourceRef="Activity_1qvr40h" targetRef="Event_1ovmynn" />
+    <bpmn:sequenceFlow id="Flow_14mp53l" sourceRef="Task_StoreOrder" targetRef="Gateway_StoreOK" />
+    <bpmn:sequenceFlow id="Flow_StoreYes" name="Yes" sourceRef="Gateway_StoreOK" targetRef="Gateway_0z3vkaw">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=storeStatus = "SUCCESS"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_StoreNo" name="No" sourceRef="Gateway_StoreOK" targetRef="EndEvent_StoreFailed" />
+    <bpmn:sequenceFlow id="Flow_ToPayConfirm" sourceRef="Gateway_0z3vkaw" targetRef="Activity_PaymentConfirm" />
+    <bpmn:sequenceFlow id="Flow_0zjykix" sourceRef="Gateway_0z3vkaw" targetRef="Task_SendConfirmation" />
+    <bpmn:sequenceFlow id="Flow_PayConfirmToView" sourceRef="Activity_PaymentConfirm" targetRef="Activity_1fr2r5e" />
+    <bpmn:sequenceFlow id="Flow_0u4zyvh" sourceRef="Activity_1fr2r5e" targetRef="Gateway_1v76hqf" />
+    <bpmn:sequenceFlow id="Flow_0nf0bix" sourceRef="Task_SendConfirmation" targetRef="Gateway_1v76hqf" />
+    <bpmn:sequenceFlow id="Flow_03p2wek" sourceRef="Gateway_1v76hqf" targetRef="EndEvent_OrderComplete" />
+  </bpmn:process>
+  <bpmn:process id="Process_0t5wapm" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_PaymentRequest" name="Payment request received">
+      <bpmn:outgoing>Flow_PayStart</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_PayRequest" messageRef="Message_SubmitPayment" />
+    </bpmn:startEvent>
+    <bpmn:endEvent id="EndEvent_PaymentResponse" name="Send payment response">
+      <bpmn:incoming>Flow_PayStart</bpmn:incoming>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_PayResponse" messageRef="Message_PaymentResponse" />
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_PayStart" sourceRef="StartEvent_PaymentRequest" targetRef="EndEvent_PaymentResponse" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Process_MarketplaceCheckout">
+    <bpmndi:BPMNPlane id="BPMNPlane_Process_MarketplaceCheckout" bpmnElement="Collaboration_0byg98s">
+      <bpmndi:BPMNShape id="Participant_0u9dj7b_di" bpmnElement="Participant_0u9dj7b" isHorizontal="true">
+        <dc:Bounds x="150" y="250" width="3620" height="730" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_0r56zmn_di" bpmnElement="Lane_0r56zmn" isHorizontal="true">
+        <dc:Bounds x="180" y="555" width="3590" height="425" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_1popzac_di" bpmnElement="Lane_1popzac" isHorizontal="true">
+        <dc:Bounds x="180" y="250" width="3590" height="305" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0gqkiqs_di" bpmnElement="adjust_quantity">
+        <dc:Bounds x="350" y="440" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1k46fw7_di" bpmnElement="Activity_1k46fw7">
+        <dc:Bounds x="220" y="570" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_02yudnd_di" bpmnElement="Gateway_02yudnd" isMarkerVisible="true">
+        <dc:Bounds x="375" y="585" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="375" y="642" width="50" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1ge213a_di" bpmnElement="Activity_1ge213a">
+        <dc:Bounds x="560" y="570" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0amz50a_di" bpmnElement="Activity_0amz50a">
+        <dc:Bounds x="560" y="680" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0shssnf_di" bpmnElement="Event_0shssnf">
+        <dc:Bounds x="802" y="702" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="778" y="745" width="84" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0hw9sig_di" bpmnElement="Activity_0hw9sig">
+        <dc:Bounds x="800" y="570" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1oxsahy_di" bpmnElement="review_basket">
+        <dc:Bounds x="800" y="440" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0l4t4de_di" bpmnElement="Event_0l4t4de">
+        <dc:Bounds x="952" y="462" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="933" y="443" width="73" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1cndptk_di" bpmnElement="Gateway_1cndptk" isMarkerVisible="true">
+        <dc:Bounds x="825" y="335" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="828" y="300" width="84" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1ydq2xh_di" bpmnElement="Event_1ydq2xh">
+        <dc:Bounds x="1002" y="342" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="978" y="385" width="85" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1ydn6bo_di" bpmnElement="Event_1ydn6bo">
+        <dc:Bounds x="1132" y="342" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1121" y="385" width="58" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1qhiytk_di" bpmnElement="Event_1qhiytk">
+        <dc:Bounds x="692" y="342" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="675" y="318" width="71" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_07sz16f_di" bpmnElement="Event_1h0ryb3">
+        <dc:Bounds x="252" y="332" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="228" y="295" width="84" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0lzqzjg_di" bpmnElement="Gateway_10qfzg8" isMarkerVisible="true">
+        <dc:Bounds x="345" y="325" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataStoreReference_0g3ple0_di" bpmnElement="DataStoreReference_0g3ple0">
+        <dc:Bounds x="245" y="705" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="233" y="762" width="74" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_RetrieveBasket_di" bpmnElement="Task_RetrieveBasket">
+        <dc:Bounds x="1327" y="660" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_BasketOK_di" bpmnElement="Gateway_BasketOK" isMarkerVisible="true">
+        <dc:Bounds x="1472" y="675" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1455" y="637" width="84" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CheckStock_di" bpmnElement="Task_CheckStock">
+        <dc:Bounds x="1567" y="660" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_StockCheckOK_di" bpmnElement="Gateway_StockCheckOK" isMarkerVisible="true">
+        <dc:Bounds x="1712" y="675" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1695" y="637" width="84" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_StockDecision_di" bpmnElement="Gateway_StockDecision" isMarkerVisible="true">
+        <dc:Bounds x="1832" y="675" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1815" y="637" width="84" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_OutOfStock_di" bpmnElement="EndEvent_OutOfStock">
+        <dc:Bounds x="1839" y="842" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1833" y="882" width="48" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_SystemError_di" bpmnElement="EndEvent_SystemError">
+        <dc:Bounds x="1719" y="902" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1705" y="942" width="64" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1nedxa6_di" bpmnElement="Gateway_1nedxa6">
+        <dc:Bounds x="1952" y="675" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1c6dr86_di" bpmnElement="Activity_1c6dr86">
+        <dc:Bounds x="2047" y="590" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1b9p2ih_di" bpmnElement="Activity_1b9p2ih">
+        <dc:Bounds x="2047" y="740" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1bsawo1_di" bpmnElement="Gateway_1bsawo1">
+        <dc:Bounds x="2202" y="675" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_ReservedOK_di" bpmnElement="Gateway_ReservedOK" isMarkerVisible="true">
+        <dc:Bounds x="2302" y="675" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2285" y="637" width="84" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0mj5ry1_di" bpmnElement="Activity_0mj5ry1">
+        <dc:Bounds x="2397" y="660" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1n1v73m_di" bpmnElement="Activity_1n1v73m">
+        <dc:Bounds x="2397" y="360" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_14gtexw_di" bpmnElement="Gateway_14gtexw" isMarkerVisible="true">
+        <dc:Bounds x="2552" y="375" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2609" y="382" width="56" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_10lfm8s_di" bpmnElement="Event_10lfm8s">
+        <dc:Bounds x="2639" y="302" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2624" y="264.5" width="66" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1fr5wwa_di" bpmnElement="Event_1fr5wwa">
+        <dc:Bounds x="2817" y="682" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2803" y="740" width="64" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0xoezft_di" bpmnElement="Gateway_0xoezft" isMarkerVisible="true">
+        <dc:Bounds x="2922" y="675" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2867" y="640" width="76" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1ib9c7t_di" bpmnElement="Gateway_1ib9c7t" isMarkerVisible="true">
+        <dc:Bounds x="2552" y="835" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1qvr40h_di" bpmnElement="Activity_1qvr40h">
+        <dc:Bounds x="2657" y="820" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1ovmynn_di" bpmnElement="Event_1ovmynn">
+        <dc:Bounds x="2817" y="842" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2804" y="882" width="63" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_StoreOrder_di" bpmnElement="Task_StoreOrder">
+        <dc:Bounds x="3017" y="660" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_StoreOK_di" bpmnElement="Gateway_StoreOK" isMarkerVisible="true">
+        <dc:Bounds x="3162" y="675" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3145" y="637" width="84" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_StoreFailed_di" bpmnElement="EndEvent_StoreFailed">
+        <dc:Bounds x="3169" y="842" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3139" y="882" width="96" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0z3vkaw_di" bpmnElement="Gateway_0z3vkaw">
+        <dc:Bounds x="3262" y="675" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_PaymentConfirm_di" bpmnElement="Activity_PaymentConfirm">
+        <dc:Bounds x="3237" y="360" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1fr2r5e_di" bpmnElement="Activity_1fr2r5e">
+        <dc:Bounds x="3387" y="360" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SendConfirmation_di" bpmnElement="Task_SendConfirmation">
+        <dc:Bounds x="3347" y="740" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1v76hqf_di" bpmnElement="Gateway_1v76hqf">
+        <dc:Bounds x="3562" y="675" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_OrderComplete_di" bpmnElement="EndEvent_OrderComplete">
+        <dc:Bounds x="3677" y="682" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3656" y="722" width="79" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataStoreReference_OrdersRead_di" bpmnElement="DataStoreReference_OrdersRead">
+        <dc:Bounds x="1352" y="820" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1340" y="877" width="74" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataStoreReference_Orders_di" bpmnElement="DataStoreReference_Orders">
+        <dc:Bounds x="3042" y="820" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3030" y="877" width="74" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_Timeout_di" bpmnElement="Event_Timeout">
+        <dc:Bounds x="2459" y="422" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2433" y="462" width="39" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_09f9ah9_di" bpmnElement="Event_09f9ah9">
+        <dc:Bounds x="832" y="502" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="814" y="536" width="73" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_0e0dgdc_di" bpmnElement="Flow_0e0dgdc">
+        <di:waypoint x="400" y="585" />
+        <di:waypoint x="400" y="520" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="404" y="543" width="72" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0q09n7b_di" bpmnElement="Flow_0q09n7b">
+        <di:waypoint x="370" y="375" />
+        <di:waypoint x="370" y="408" />
+        <di:waypoint x="270" y="408" />
+        <di:waypoint x="270" y="570" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_04yoy8r_di" bpmnElement="Flow_04yoy8r">
+        <di:waypoint x="320" y="610" />
+        <di:waypoint x="375" y="610" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_152qwwc_di" bpmnElement="Flow_152qwwc">
+        <di:waypoint x="425" y="610" />
+        <di:waypoint x="560" y="610" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="484" y="592" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1kunpwe_di" bpmnElement="Flow_1kunpwe">
+        <di:waypoint x="400" y="635" />
+        <di:waypoint x="400" y="720" />
+        <di:waypoint x="560" y="720" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="417" y="703" width="86" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_153yhnn_di" bpmnElement="Flow_153yhnn">
+        <di:waypoint x="660" y="610" />
+        <di:waypoint x="800" y="610" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1o3baug_di" bpmnElement="Flow_1o3baug">
+        <di:waypoint x="660" y="720" />
+        <di:waypoint x="802" y="720" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1b3zcfv_di" bpmnElement="Flow_1b3zcfv">
+        <di:waypoint x="820" y="570" />
+        <di:waypoint x="820" y="520" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="703" y="326" width="73" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0l2poek_di" bpmnElement="Flow_0l2poek">
+        <di:waypoint x="850" y="440" />
+        <di:waypoint x="850" y="385" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0p4p1ow_di" bpmnElement="Flow_0p4p1ow">
+        <di:waypoint x="867" y="525" />
+        <di:waypoint x="920" y="540" />
+        <di:waypoint x="970" y="540" />
+        <di:waypoint x="970" y="498" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_00hnnu0_di" bpmnElement="Flow_00hnnu0">
+        <di:waypoint x="875" y="360" />
+        <di:waypoint x="1002" y="360" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="917" y="326" width="45" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0qotl72_di" bpmnElement="Flow_0qotl72">
+        <di:waypoint x="825" y="360" />
+        <di:waypoint x="728" y="360" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="753" y="342" width="47" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_122hjsf_di" bpmnElement="Flow_122hjsf">
+        <di:waypoint x="1038" y="360" />
+        <di:waypoint x="1132" y="360" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1dudrbv_di" bpmnElement="Flow_1dudrbv">
+        <di:waypoint x="288" y="350" />
+        <di:waypoint x="345" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1ddfn2i_di" bpmnElement="Flow_1ddfn2i">
+        <di:waypoint x="402" y="440" />
+        <di:waypoint x="402" y="408" />
+        <di:waypoint x="395" y="408" />
+        <di:waypoint x="395" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0ajodlc_di" bpmnElement="Flow_0ajodlc">
+        <di:waypoint x="710" y="378" />
+        <di:waypoint x="710" y="676" />
+        <di:waypoint x="1285" y="676" />
+        <di:waypoint x="1285" y="700" />
+        <di:waypoint x="1327" y="700" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_BasketToGateway_di" bpmnElement="Flow_BasketToGateway">
+        <di:waypoint x="1427" y="700" />
+        <di:waypoint x="1472" y="700" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_BasketYes_di" bpmnElement="Flow_BasketYes">
+        <di:waypoint x="1522" y="700" />
+        <di:waypoint x="1567" y="700" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1536" y="682" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_BasketNo_di" bpmnElement="Flow_BasketNo">
+        <di:waypoint x="1497" y="725" />
+        <di:waypoint x="1497" y="920" />
+        <di:waypoint x="1719" y="920" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1505" y="820" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_07ah2xl_di" bpmnElement="Flow_07ah2xl">
+        <di:waypoint x="1667" y="700" />
+        <di:waypoint x="1712" y="700" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_StockCheckYes_di" bpmnElement="Flow_StockCheckYes">
+        <di:waypoint x="1762" y="700" />
+        <di:waypoint x="1832" y="700" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1776" y="682" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_StockCheckNo_di" bpmnElement="Flow_StockCheckNo">
+        <di:waypoint x="1737" y="725" />
+        <di:waypoint x="1737" y="902" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1745" y="800" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0yntuct_di" bpmnElement="Flow_0yntuct">
+        <di:waypoint x="1882" y="700" />
+        <di:waypoint x="1952" y="700" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1909" y="682" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0014g6w_di" bpmnElement="Flow_0014g6w">
+        <di:waypoint x="1857" y="725" />
+        <di:waypoint x="1857" y="842" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1865" y="780" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ReservedNo_di" bpmnElement="Flow_ReservedNo">
+        <di:waypoint x="2327" y="725" />
+        <di:waypoint x="2327" y="920" />
+        <di:waypoint x="1755" y="920" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2335" y="820" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0yy4sli_di" bpmnElement="Flow_0yy4sli">
+        <di:waypoint x="1977" y="675" />
+        <di:waypoint x="1977" y="630" />
+        <di:waypoint x="2047" y="630" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_02qncwl_di" bpmnElement="Flow_02qncwl">
+        <di:waypoint x="1977" y="725" />
+        <di:waypoint x="1977" y="780" />
+        <di:waypoint x="2047" y="780" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_07n2kqq_di" bpmnElement="Flow_07n2kqq">
+        <di:waypoint x="2147" y="630" />
+        <di:waypoint x="2227" y="630" />
+        <di:waypoint x="2227" y="675" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0x9kmlc_di" bpmnElement="Flow_0x9kmlc">
+        <di:waypoint x="2147" y="780" />
+        <di:waypoint x="2227" y="780" />
+        <di:waypoint x="2227" y="725" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_JoinToReserved_di" bpmnElement="Flow_JoinToReserved">
+        <di:waypoint x="2252" y="700" />
+        <di:waypoint x="2302" y="700" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ReservedYes_di" bpmnElement="Flow_ReservedYes">
+        <di:waypoint x="2352" y="700" />
+        <di:waypoint x="2397" y="700" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2364" y="682" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0365h83_di" bpmnElement="Flow_0365h83">
+        <di:waypoint x="2422" y="660" />
+        <di:waypoint x="2422" y="440" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_PaymentRetry_di" bpmnElement="Flow_PaymentRetry">
+        <di:waypoint x="2947" y="675" />
+        <di:waypoint x="2947" y="290" />
+        <di:waypoint x="2447" y="290" />
+        <di:waypoint x="2447" y="360" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2955" y="480" width="30" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1vs0fei_di" bpmnElement="Flow_1vs0fei">
+        <di:waypoint x="2497" y="400" />
+        <di:waypoint x="2552" y="400" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0i0it6y_di" bpmnElement="Flow_0i0it6y">
+        <di:waypoint x="2577" y="375" />
+        <di:waypoint x="2577" y="320" />
+        <di:waypoint x="2639" y="320" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2585" y="340" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0e1jkbz_di" bpmnElement="Flow_0e1jkbz">
+        <di:waypoint x="2577" y="425" />
+        <di:waypoint x="2577" y="835" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2585" y="470" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1kpu03i_di" bpmnElement="Flow_1kpu03i">
+        <di:waypoint x="2853" y="700" />
+        <di:waypoint x="2922" y="700" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0voo50l_di" bpmnElement="Flow_0voo50l">
+        <di:waypoint x="2972" y="700" />
+        <di:waypoint x="3017" y="700" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2975" y="682" width="45" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0lskahm_di" bpmnElement="Flow_0lskahm">
+        <di:waypoint x="2947" y="725" />
+        <di:waypoint x="2947" y="940" />
+        <di:waypoint x="2577" y="940" />
+        <di:waypoint x="2577" y="885" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2955" y="800" width="35" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0htsbdk_di" bpmnElement="Flow_0htsbdk">
+        <di:waypoint x="2477" y="458" />
+        <di:waypoint x="2477" y="520" />
+        <di:waypoint x="2532" y="520" />
+        <di:waypoint x="2532" y="860" />
+        <di:waypoint x="2552" y="860" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1bz78kr_di" bpmnElement="Flow_1bz78kr">
+        <di:waypoint x="2602" y="860" />
+        <di:waypoint x="2657" y="860" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0r1ci4d_di" bpmnElement="Flow_0r1ci4d">
+        <di:waypoint x="2757" y="860" />
+        <di:waypoint x="2817" y="860" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_14mp53l_di" bpmnElement="Flow_14mp53l">
+        <di:waypoint x="3117" y="700" />
+        <di:waypoint x="3162" y="700" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_StoreYes_di" bpmnElement="Flow_StoreYes">
+        <di:waypoint x="3212" y="700" />
+        <di:waypoint x="3262" y="700" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3224" y="682" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_StoreNo_di" bpmnElement="Flow_StoreNo">
+        <di:waypoint x="3187" y="725" />
+        <di:waypoint x="3187" y="842" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3195" y="780" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToPayConfirm_di" bpmnElement="Flow_ToPayConfirm">
+        <di:waypoint x="3287" y="675" />
+        <di:waypoint x="3287" y="440" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0zjykix_di" bpmnElement="Flow_0zjykix">
+        <di:waypoint x="3287" y="725" />
+        <di:waypoint x="3287" y="780" />
+        <di:waypoint x="3347" y="780" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_PayConfirmToView_di" bpmnElement="Flow_PayConfirmToView">
+        <di:waypoint x="3337" y="400" />
+        <di:waypoint x="3387" y="400" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0u4zyvh_di" bpmnElement="Flow_0u4zyvh">
+        <di:waypoint x="3487" y="400" />
+        <di:waypoint x="3587" y="400" />
+        <di:waypoint x="3587" y="675" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0nf0bix_di" bpmnElement="Flow_0nf0bix">
+        <di:waypoint x="3447" y="780" />
+        <di:waypoint x="3587" y="780" />
+        <di:waypoint x="3587" y="725" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_03p2wek_di" bpmnElement="Flow_03p2wek">
+        <di:waypoint x="3612" y="700" />
+        <di:waypoint x="3677" y="700" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Participant_0x7plfr_di" bpmnElement="Participant_0x7plfr" isHorizontal="true">
+        <dc:Bounds x="2497" y="10" width="420" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_PaymentRequest_di" bpmnElement="StartEvent_PaymentRequest">
+        <dc:Bounds x="2559" y="82" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2548" y="62" width="70" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_PaymentResponse_di" bpmnElement="EndEvent_PaymentResponse">
+        <dc:Bounds x="2817" y="82" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2807" y="62" width="72" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_PayStart_di" bpmnElement="Flow_PayStart">
+        <di:waypoint x="2595" y="100" />
+        <di:waypoint x="2817" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DataInputAssociation_09cyqmd_di" bpmnElement="DataInputAssociation_09cyqmd">
+        <di:waypoint x="270" y="705" />
+        <di:waypoint x="270" y="650" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DataInputAssociation_Orders_di" bpmnElement="DataInputAssociation_Orders">
+        <di:waypoint x="1377" y="820" />
+        <di:waypoint x="1377" y="740" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DataOutputAssociation_Orders_di" bpmnElement="DataOutputAssociation_Orders">
+        <di:waypoint x="3067" y="740" />
+        <di:waypoint x="3067" y="820" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0nd93ls_di" bpmnElement="Flow_0nd93ls">
+        <di:waypoint x="2657" y="302" />
+        <di:waypoint x="2657" y="221" />
+        <di:waypoint x="2577" y="221" />
+        <di:waypoint x="2577" y="118" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2663" y="258" width="69" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_009rdxy_di" bpmnElement="Flow_009rdxy">
+        <di:waypoint x="2835" y="118" />
+        <di:waypoint x="2835" y="682" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2841" y="470" width="74" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
