@@ -1,0 +1,49 @@
+{
+  "components": [
+    {
+      "text": "=\"# Your arrangement\\n\\nMethod: **\" + fulfilmentMethod + \"**\\n\\nDate: **\" + arrangement.proposedDate + \"**\"",
+      "type": "text",
+      "id": "Form_ReviewArrangement_c0"
+    },
+    {
+      "text": "=\"Your preferred date is too soon, so we moved it to the earliest possible date (\" + arrangement.earliestFulfilmentDate + \").\"",
+      "type": "text",
+      "conditional": {
+        "hide": "=arrangement.dateAdjusted != true"
+      },
+      "id": "Form_ReviewArrangement_c1"
+    },
+    {
+      "text": "=\"Delivery address: \" + deliveryAddress",
+      "type": "text",
+      "conditional": {
+        "hide": "=fulfilmentMethod != \"DELIVERY\""
+      },
+      "id": "Form_ReviewArrangement_c3"
+    },
+    {
+      "label": "Is this OK?",
+      "type": "radio",
+      "key": "arrangementDecision",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        {
+          "label": "Confirm",
+          "value": "confirm"
+        },
+        {
+          "label": "Change method or date",
+          "value": "change"
+        }
+      ],
+      "id": "Form_ReviewArrangement_c2"
+    }
+  ],
+  "type": "default",
+  "id": "Form_ReviewArrangement",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.9.0",
+  "schemaVersion": 18
+}

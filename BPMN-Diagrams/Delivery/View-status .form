@@ -1,0 +1,22 @@
+{
+  "components": [
+    {
+      "text": "=\"# Order \" + orderId + \"\\n\\n\" + statusMessage + \"\\n\\nConfirmation reference: **\" + confirmationReference + \"**\"",
+      "type": "text",
+      "id": "Form_ViewStatus_c0"
+    },
+    {
+      "text": "=\"Refund: \u00a3\" + string(refundAmount) + \" (ref \" + refundReference + \")\"",
+      "type": "text",
+      "conditional": {
+        "hide": "=refundAmount = null"
+      },
+      "id": "Form_ViewStatus_c1"
+    }
+  ],
+  "type": "default",
+  "id": "Form_ViewStatus",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.9.0",
+  "schemaVersion": 18
+}

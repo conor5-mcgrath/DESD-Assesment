@@ -1,0 +1,45 @@
+{
+  "components": [
+    {
+      "text": "=\"# Order \" + orderId + \" - your items\\n\\n\" + string join(for i in producerItems return \"- \" + string(i.quantity) + \" x \" + i.name, \"\\n\") + \"\\n\\n**\" + fulfilmentMethod + \"** on **\" + arrangement.proposedDate + \"**\"",
+      "type": "text",
+      "id": "Form_FulfilmentStatus_c0"
+    },
+    {
+      "label": "Status",
+      "type": "radio",
+      "key": "fulfilmentStatus",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        {
+          "label": "Ready (prepared for delivery or collection)",
+          "value": "READY"
+        },
+        {
+          "label": "Unable to fulfil",
+          "value": "UNABLE"
+        }
+      ],
+      "id": "Form_FulfilmentStatus_c1"
+    },
+    {
+      "label": "Reason (why unable?)",
+      "type": "textarea",
+      "key": "unableReason",
+      "validate": {
+        "required": true
+      },
+      "conditional": {
+        "hide": "=fulfilmentStatus != \"UNABLE\""
+      },
+      "id": "Form_FulfilmentStatus_c2"
+    }
+  ],
+  "type": "default",
+  "id": "Form_FulfilmentStatus",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.9.0",
+  "schemaVersion": 18
+}

@@ -1,0 +1,65 @@
+{
+  "components": [
+    {
+      "text": "=\"# Order \" + orderId + \"\\nTotal: \u00a3\" + string(orderTotal) + \"\\n\\nHow would you like to receive your order?\"",
+      "type": "text",
+      "id": "Form_ChooseMethod_c0"
+    },
+    {
+      "label": "Delivery or collection",
+      "type": "radio",
+      "key": "fulfilmentMethod",
+      "validate": {
+        "required": true
+      },
+      "values": [
+        {
+          "label": "Delivery to my address",
+          "value": "DELIVERY"
+        },
+        {
+          "label": "Collection",
+          "value": "COLLECTION"
+        }
+      ],
+      "id": "Form_ChooseMethod_c1"
+    },
+    {
+      "label": "Preferred date",
+      "type": "datetime",
+      "subtype": "date",
+      "dateLabel": "Preferred date",
+      "key": "preferredDate",
+      "validate": {
+        "required": true
+      },
+      "id": "Form_ChooseMethod_c2"
+    },
+    {
+      "label": "Delivery address",
+      "type": "textarea",
+      "key": "deliveryAddress",
+      "validate": {
+        "required": true
+      },
+      "conditional": {
+        "hide": "=fulfilmentMethod != \"DELIVERY\""
+      },
+      "id": "Form_ChooseMethod_c3"
+    },
+    {
+      "label": "Delivery instructions (optional)",
+      "type": "textfield",
+      "key": "deliveryInstructions",
+      "conditional": {
+        "hide": "=fulfilmentMethod != \"DELIVERY\""
+      },
+      "id": "Form_ChooseMethod_c4"
+    }
+  ],
+  "type": "default",
+  "id": "Form_ChooseMethod",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.9.0",
+  "schemaVersion": 18
+}
