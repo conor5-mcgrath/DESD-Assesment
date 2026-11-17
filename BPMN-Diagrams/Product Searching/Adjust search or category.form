@@ -1,1 +1,0 @@
-{"executionPlatform":"Camunda Cloud","executionPlatformVersion":"8.10.0","exporter":{"name":"Camunda Web Modeler","version":"e24511c"},"schemaVersion":19,"id":"adjust-search-or-category-0roeerl","components":[{"text":"# No products were found. Try a different search or category.","type":"text","layout":{"row":"Row_19i00tg","columns":null},"id":"Field_0gpwnp3"}],"type":"default"}
