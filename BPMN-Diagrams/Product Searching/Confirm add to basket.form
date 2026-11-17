@@ -1,0 +1,1 @@
+{"executionPlatform":"Camunda Cloud","executionPlatformVersion":"8.10.0","exporter":{"name":"Camunda Web Modeler","version":"e24511c"},"schemaVersion":19,"id":"confirm-add-to-basket-133lo9g","components":[{"label":"Add this product to the basket","type":"checkbox","layout":{"row":"Row_0nnukxk","columns":null},"id":"Field_1ldjd6g","key":"addToBasket"}],"type":"default"}

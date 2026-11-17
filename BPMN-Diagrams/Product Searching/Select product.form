@@ -1,0 +1,1 @@
+{"executionPlatform":"Camunda Cloud","executionPlatformVersion":"8.10.0","exporter":{"name":"Camunda Web Modeler","version":"e24511c"},"schemaVersion":19,"id":"select-product-0yzagu0","components":[{"label":"Product name","type":"textfield","layout":{"row":"Row_1wcdqb1","columns":null},"id":"Field_1ttlv9k","key":"productName"}],"type":"default"}

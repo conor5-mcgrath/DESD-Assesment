@@ -1,0 +1,1 @@
+{"executionPlatform":"Camunda Cloud","executionPlatformVersion":"8.10.0","exporter":{"name":"Camunda Web Modeler","version":"e24511c"},"schemaVersion":19,"id":"enter-search-term-0c53gdg","components":[{"label":"Search term","type":"textfield","layout":{"row":"Row_1d3vhoa","columns":null},"id":"Field_1e8tdot","key":"searchTerm"}],"type":"default"}
