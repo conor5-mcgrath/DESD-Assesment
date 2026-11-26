@@ -132,7 +132,7 @@ The project brings together payment, personal data, food information and multi-p
 
 ---
 
-## References (verify current versions)
+## References
 
 - UK GDPR and Data Protection Act 2018; ICO guidance
 - Payment Services Regulations 2017; PCI Security Standards Council, *PCI DSS*
