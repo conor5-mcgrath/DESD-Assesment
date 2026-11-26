@@ -11,7 +11,8 @@
 
 The marketplace's checkout and payment functionality handles personal data, payments, stock commitments and the division of money between several producers and the network. This section sets out the legal, social, ethical and professional issues that apply to it and how the team's design responds to them.
 
----|---|
+| Stage | Consideration |
+|---|---|
 | Stock check at checkout | Accuracy of availability, honest messaging, avoiding overselling |
 | Identify producers; delivery/collection arrangements | Consumer information duties, clear supplier responsibility, data shared with producers |
 | Customer review and confirmation | Price transparency, contract formation |
@@ -127,7 +128,7 @@ As a development team working for a company, we are accountable to the client, t
 
 ## 7. Conclusion
 
-Use Case 2 brings together payment, personal data, food information and multi-party commercial relationships. The team's responsibilities are to protect customer and producer data, process payments securely through a regulated sandbox provider, provide clear and honest information at checkout, calculate and record commission and producer shares accurately, and handle failures fairly. Working to professional standards of security, testing and documentation supports trust in the marketplace among producers, customers, community groups and restaurants.
+The project brings together payment, personal data, food information and multi-party commercial relationships. The team's responsibilities are to protect customer and producer data, process payments securely through a regulated sandbox provider, provide clear and honest information at checkout, calculate and record commission and producer shares accurately, and handle failures fairly. Working to professional standards of security, testing and documentation supports trust in the marketplace among producers, customers, community groups and restaurants.
 
 ---
 
