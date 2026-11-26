@@ -1,9 +1,7 @@
 # Legal, Social, Ethical and Professional Considerations
 
 **Project:** Bristol Regional Food Network (BRFN) Digital Marketplace
-**Scope:** Use Case 2 – Customer Multi-Vendor Order, Checkout and Payment
-
-> *BRFN and all associated entities are fictitious and used for educational purposes. All payment functionality is built and tested using a sandbox or simulated payment service with synthetic data only. This section is an analysis for project purposes, not legal advice.*
+**Scope:** Customer Multi-Vendor Order, Checkout and Payment
 
 ---
 
